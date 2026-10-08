@@ -28,9 +28,10 @@ uniform float uCloudCoverage;
 uniform float uAtmosphereStrength;
 uniform float uDepth;
 uniform float uOctaves;
+uniform int uLod;
 uniform vec2 uCenter;
 uniform vec2 uCameraOffset;
-uniform vec2 uLightOrigin;
+uniform vec2 uLightDirection;
 uniform vec3 uOceanDark;
 uniform vec3 uOceanLight;
 uniform vec3 uLandDark;
@@ -67,10 +68,10 @@ void main() {
 
     float terrainWarpX = fbm(terrainUv * 1.41 + vec2(2.1, 8.2), 2);
     float terrainWarpY = fbm(terrainUv * 1.63 + vec2(7.4, 1.6), 2);
-    float terrain = fbm(terrainUv + vec2(terrainWarpX, terrainWarpY) * 1.25, int(uOctaves));
+    float terrain = fbm(terrainUv + vec2(terrainWarpX, terrainWarpY) * 1.25, uLod <= 1 ? 2 : uLod == 2 ? 3 : int(uOctaves));
     float oceanNoise = fbm(terrainUv * 1.8 + vec2(19.0, -7.0), 2);
 
-    vec3 lightDirection = normalize(vec3(uLightOrigin, 0.82));
+    vec3 lightDirection = normalize(vec3(uLightDirection, 0.82));
     float light = sphereLighting(normal, lightDirection, 0.17);
     float dither = bayer4(gl_FragCoord.xy);
     float landThreshold = uSeaLevel + (dither - 0.5) * 0.035;
@@ -84,7 +85,7 @@ void main() {
     cloudUv.x += uTime * uCloudSpeed * 0.32;
     float cloudWarp = fbm(cloudUv * 1.55 + vec2(5.3, 3.7), 2);
     float cloudField = fbm(cloudUv + vec2(cloudWarp * 1.25, -cloudWarp * 0.82), 3);
-    float cloudMask = smoothstep(uCloudCoverage, uCloudCoverage + 0.14, cloudField);
+    float cloudMask = uLod <= 1 ? 0.0 : smoothstep(uCloudCoverage, uCloudCoverage + 0.14, cloudField);
     cloudMask *= 0.3 + light * 0.7;
     float cloudShade = ditheredBand(light, 4.0, gl_FragCoord.xy);
     surface = mix(surface, mix(uCloudShadow, uCloudLight, cloudShade), cloudMask * 0.76);

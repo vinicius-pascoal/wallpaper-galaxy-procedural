@@ -20,7 +20,7 @@ export class Engine {
     this.performance = new PerformanceManager();
     this.mouse = new MouseParallax(canvas);
     this.renderer = new Renderer(canvas, options.quality);
-    this.scene = new Scene(options.seed, options.quality, options.view);
+    this.scene = new Scene(options.seed, options.quality, options.view, options.showOrbits);
     this.running = false;
     this._boundFrame = this._frame.bind(this);
     this._boundResize = this._resize.bind(this);
@@ -89,10 +89,14 @@ export class Engine {
       `Nebulae          ${stats.nebulaCount}`,
       `Systems          ${stats.systemCount}`,
       `Planets          ${stats.planetCount}`,
+      `LOD              ${stats.lodCounts[0]}/${stats.lodCounts[1]}/${stats.lodCounts[2]}/${stats.lodCounts[3]}`,
+      `Culled bodies     ${stats.culledBodies}`,
       `Terran seed      ${stats.terranSeed}`,
       `Terran radius    ${stats.terranRadius.toFixed(3)}`,
       `FBM octaves      ${stats.fbmOctaves}`,
       `Draw calls       ${renderer.drawCalls}`,
+      `Star draws       ${renderer.starDrawCalls}`,
+      `Planet draws     ${renderer.planetDrawCalls}`,
       `Quality          ${this.options.quality.name}`,
       `Seed             ${this.options.seed >>> 0}`,
     ].join("\n");

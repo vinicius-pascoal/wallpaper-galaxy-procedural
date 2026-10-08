@@ -1,67 +1,73 @@
 # Porte do PixelPlanets
 
-## Estado
+## Regra de referência
 
-Os algoritmos comuns e o primeiro Terran foram adaptados. A pasta `PixelPlanets-Wallpaper-Reference/` permanece intacta e não é carregada pelo navegador.
+`PixelPlanets-Wallpaper-Reference/` é somente leitura. Nenhum arquivo Godot é carregado em runtime e a licença original não foi alterada.
 
-## Plano de mapeamento Godot → GLSL ES 3.00
+## Biblioteca comum
 
-| Referência Godot | Destino WebGL2 | Observação |
+| Conceito original | Novo arquivo | Status |
 | --- | --- | --- |
-| `shader_type canvas_item` | `#version 300 es` | trocar entradas e saídas por `in`/`out` explícitos |
-| `TIME` | `uniform float uTime` | fornecido pelo `Time` em segundos |
-| `UV` | coordenada local calculada no vertex shader | adaptada à esfera e à pixelização |
-| funções de ruído | `shaders/common/noise.glsl` | hash sem estado mutável |
-| FBM | `shaders/common/fbm.glsl` | máximo de oito octaves, configurável |
-| rotação e esfera | `shaders/common/sphere.glsl` e `rotate.glsl` | normal esférica e longitude/latitude |
-| paleta | `PaletteGenerator.js` + `shaders/common/palette.glsl` | famílias de hue coerentes |
-| dithering | `shaders/common/dithering.glsl` | Bayer 4x4 estático |
-| layers de cena Godot | passes ou composição WebGL2 | sem dependência do Godot runtime |
+| `rand` / `noise` | `shaders/common/noise.glsl` | hash sem estado, portado |
+| `fbm` | `shaders/common/fbm.glsl` | máximo de 8 octaves, portado |
+| `spherify` | `shaders/common/sphere.glsl` | normal e UV esférica, adaptado |
+| `rotate` | `shaders/common/rotate.glsl` | GLSL ES 3.00, portado |
+| `dither` | `shaders/common/dithering.glsl` | Bayer 4×4 estático, adaptado |
+| paletas | `PaletteGenerator.js` / `palette.glsl` | famílias coerentes, adaptado |
+| iluminação | `shaders/common/lighting.glsl` | diffuse, terminator e rim, adaptado |
 
-## Funções portadas/adaptadas
+O `ShaderLoader` resolve includes recursivos, elimina duplicatas dentro da compilação, usa cache e detecta ciclos.
 
-### noise / FBM
+## Star
 
-Original: `PixelPlanets-Wallpaper-Reference/Planets/Rivers/LandRivers.gdshader` e `Planets/LandMasses/PlanetLandmass.gdshader`.
+Original: `Planets/Star/Star.gdshader`, `StarBlobs.gdshader` e `StarFlares.gdshader`.
 
-Novo: `shaders/common/noise.glsl` e `shaders/common/fbm.glsl`.
+Novo: `src/celestial/Star.js` e `shaders/star/star.frag`.
 
-Alterações: o `rand` baseado em `sin(dot())` foi substituído por hashes determinísticos sem estado; o FBM usa no máximo oito octaves e recebe o número de octaves como parâmetro.
+Alterações: as layers Godot foram compostas em uma passagem fullscreen com superfície procedural, blobs FBM, atividade, flares radiais, paleta por tipo estelar e dithering. Os tipos suportados são RED, ORANGE, YELLOW, WHITE e BLUE.
 
-Status: portado e usado por nebulosa e Terran.
+Status: portado/adaptado.
 
-### spherify / sphere / rotation
+## Terran
 
-Original: funções `spherify` e `rotate` nos shaders `Rivers` e `LandMasses`.
+Original: `Planets/Rivers/`, `Planets/LandMasses/` e `Planets/LandMasses/Clouds.gdshader`.
 
-Novo: `shaders/common/sphere.glsl` e `shaders/common/rotate.glsl`.
+Novo: `shaders/planets/terran.frag` e `src/celestial/planets/TerranPlanet.js`.
 
-Alterações: a projeção agora fornece uma normal esférica e UV longitude/latitude para que terreno e nuvens possam girar de forma independente.
+Alterações: oceano, terreno, continentes, nuvens, iluminação dependente da estrela e atmosfera foram compostos em uma passagem. LOD reduz octaves e desativa nuvens em corpos pequenos.
 
-Status: portado e usado em `shaders/planets/terran.frag`.
+Status: portado/adaptado.
 
-### dithering / lighting / palette
+## Gas Giant
 
-Original: dithering de terminador, camadas de cores e bordas de luz em `Rivers`, `LandMasses` e `Clouds`.
+Original: `Planets/GasPlanet/GasPlanet.gdshader`, `Planets/GasPlanetLayers/GasLayers.gdshader` e `Ring.gdshader`.
 
-Novo: `shaders/common/dithering.glsl`, `shaders/common/lighting.glsl`, `shaders/common/palette.glsl` e `src/procedural/PaletteGenerator.js`.
+Novo: `shaders/planets/gas.frag`.
 
-Alterações: foi usado Bayer 4x4 estático para não criar cintilação temporal. As paletas são geradas por família de hue, saturação e valor, em vez de canais RGB independentes.
+Alterações: bandas verticais recebem ruído/FBM, rotação independente, iluminação e dithering. Anéis são opcionais por seed e a máscara separa trecho traseiro e frontal no mesmo shader.
 
-Status: portado/adaptado e usado pelo Terran.
+Status: primeira versão funcional.
 
-### Terran composto
+## Lava World
 
-Original: composição de layers `Rivers`, `LandMasses` e `Clouds`.
+Original: `Planets/LavaWorld/Rivers.gdshader` e composição `LavaWorld`.
 
-Novo: `shaders/planets/terran.frag`.
+Novo: `shaders/planets/lava.frag`.
 
-Alterações: oceano, terreno, nuvens, iluminação, atmosfera e dithering foram compostos em uma única passagem fullscreen para manter as draw calls controladas. O planeta é recortado no shader e renderizado diretamente no framebuffer interno.
+Alterações: crosta, fissuras e regiões emissivas usam campos de ruído separados; a lava mantém brilho no lado escuro sem bloom externo.
 
-Status: primeiro Terran funcional.
+Status: primeira versão funcional.
 
-## Include system
+## Ice World
 
-`src/core/ShaderLoader.js` resolve includes relativos, mantém cache de source, elimina includes duplicados dentro de uma compilação e reporta ciclos com a cadeia de arquivos envolvida.
+Original: `Planets/IceWorld/`.
 
-O código derivado/adaptado é acompanhado pela cópia da licença MIT em `THIRD_PARTY_LICENSES/PixelPlanets-LICENSE.txt`; a licença dentro da referência não foi alterada.
+Novo: `shaders/planets/ice.frag`.
+
+Alterações: superfície fria, cobertura de gelo e fissuras usam FBM/threshold com paleta azul-ciano derivada da seed.
+
+Status: primeira versão funcional.
+
+## Licença
+
+As adaptações são acompanhadas pela cópia MIT em `THIRD_PARTY_LICENSES/PixelPlanets-LICENSE.txt`.

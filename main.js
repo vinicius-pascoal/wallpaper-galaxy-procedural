@@ -22,6 +22,7 @@ async function boot() {
       quality,
       debug: debugEnabled,
       view,
+      showOrbits: query.get("orbits") === "true",
       debugElement: debug,
     });
 

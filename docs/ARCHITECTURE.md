@@ -1,67 +1,89 @@
 # Arquitetura
 
-## Pipeline de renderização
-
-1. O canvas usa o tamanho físico da janela, limitado a device pixel ratio 2.
-2. O `Renderer` calcula uma resolução interna pela altura do preset: 360, 540, 720 ou 1080 pixels.
-3. O framebuffer interno recebe nebulosas, starfield, galáxia e o Terran em ordem de profundidade.
-4. A textura interna usa `TEXTURE_MIN_FILTER` e `TEXTURE_MAG_FILTER` em `NEAREST`.
-5. Um quad fullscreen copia a textura para o canvas sem blur.
-
-O aspecto é calculado a cada resize; a cena não assume 16:9.
-
-## Passes atuais
-
-| Ordem | Pass | Modo |
-| --- | --- | --- |
-| 1 | Nebula fullscreen | alpha sobre fundo escuro |
-| 2 | Starfield | pontos aditivos |
-| 3 | Spiral galaxy | pontos aditivos |
-| 4 | Terran hero | alpha sobre a cena |
-| 5 | Pixel upscale | textura `NEAREST` |
-
-Nebulosas usam uma única chamada com uniform arrays para até quatro instâncias. O Terran usa o mesmo quad fullscreen, mas calcula a esfera, a superfície e o recorte dentro do fragment shader.
-
-## Dados de partículas
-
-Cada partícula ocupa sete floats no VBO:
+## Hierarquia
 
 ```text
-x, y, size, brightness, temperature, twinkleSpeed, depth
+Universe
+├── Galaxy
+│   ├── StarField
+│   ├── Nebula
+│   └── SolarSystem[]
+│       ├── Star
+│       └── Planet[]
+└── LODManager
 ```
 
-O `Float32Array` é criado apenas durante a geração da cena. O render loop reutiliza os VBOs e não cria objetos por estrela ou por frame.
+`TerranPlanet` continua podendo existir como hero object, mas agora o Terran principal pertence ao primeiro `SolarSystem` gerado. A API `Universe.terran` permanece como alias de compatibilidade.
 
-## Seed
+## Pipeline de renderização
 
-`hashSeed(parentSeed, identifier)` combina um seed de 32 bits com um identificador numérico ou textual. A `Universe` deriva separadamente as seeds de `galaxy`, `background-stars`, `nebulae` e `hero-terran`. Assim, alterar uma parte da geração não exige usar `seed % 1000` e não muda a identidade de forma implícita.
+1. Nebula fullscreen no framebuffer interno.
+2. Starfield e galáxia como pontos em VBOs.
+3. Linhas orbitais opcionais.
+4. Corpos de sistemas ordenados por profundidade orbital.
+5. Cada corpo usa ponto simples, shader intermediário ou shader completo conforme LOD.
+6. Quad fullscreen faz upscale com textura `NEAREST`.
 
-## Animação
+Os passes de corpos usam scissor culling baseado no raio em screen space, evitando rasterizar a tela inteira para objetos pequenos.
 
-A estrutura da galáxia é estática depois da geração. O vertex shader aplica:
+## Seeds
 
-- twinkle individual usando fase e velocidade armazenadas;
-- rotação lenta dependente da profundidade para as estrelas da galáxia;
-- deslocamento de câmera proporcional à profundidade;
-- drift cinematográfico de baixa amplitude.
+```text
+Universe seed
+└── solar-systems
+    └── system-N
+        ├── star
+        ├── planet-0
+        │   └── type / palette / orbit
+        └── planet-N
+```
 
-Nebulosas evoluem por UV drift e domain warping em baixa velocidade. O Terran gira a coordenada de longitude do terreno e usa outra velocidade para nuvens.
+Cada identificador é passado a `hashSeed`, portanto adicionar ou remover um sistema não depende do estado sequencial do PRNG dos sistemas anteriores.
 
-`Time` limita o delta time a 50 ms para evitar saltos após pausas ou perda de foco.
+## SolarSystem e OrbitSystem
 
-## Responsabilidades
+`SolarSystem` é apenas modelo e simulação. Ele contém `Star`, `Planet[]`, posição, profundidade e `OrbitSystem`. O `OrbitSystem` pré-calcula a geometria das linhas orbitais e atualiza apenas propriedades/TypedArrays existentes no frame:
 
-| Módulo | Responsabilidade |
-| --- | --- |
-| `Engine` | ciclo de vida, teclado de debug e loop principal |
-| `Renderer` | WebGL2, framebuffer, passes, shaders, VBOs e upscale |
-| `Scene` | ordem de renderização e modos de visualização |
-| `Universe` | composição determinística da geração |
-| `Galaxy` / `SpiralGalaxy` | parâmetros e distribuição espiral |
-| `StarField` | estrelas distantes em lote |
-| `Nebula` | parâmetros compactos de nebulosas procedurais |
-| `TerranPlanet` | configuração e paleta do hero planet |
-| `Camera` | parallax e drift com smoothing |
-| `ShaderLoader` | includes GLSL relativos, cache, duplicatas e ciclos |
+```js
+angle = initialAngle + elapsed * speed * direction;
+x = centerX + cos(angle) * semiMajorAxis;
+y = centerY + sin(angle) * semiMinorAxis * inclination;
+```
 
-Sistemas solares, outros planetas, áudio e propriedades completas do Wallpaper Engine ainda não são executados. A estrutura pode recebê-los sem colocar sua lógica no `main.js`.
+O sinal de `sin(angle)` fornece o depth sorting simplificado: planetas atrás são desenhados antes da estrela, planetas à frente depois.
+
+## PlanetFactory
+
+`PlanetFactory` seleciona entre `TERRAN`, `GAS`, `LAVA` e `ICE`, criando dados determinísticos e paletas específicas. Os shaders compartilham `uTime`, `uSeed`, `uCenter`, `uRadius`, `uLightDirection`, `uLod` e a grade interna quando esses uniforms são relevantes.
+
+## LOD
+
+`LODManager` classifica pelo raio em pixels internos:
+
+| Raio na tela | LOD | Renderização |
+| --- | --- | --- |
+| `< 2 px` | 0 | ponto simples |
+| `2–8 px` | 1 | esfera/paleta simplificada |
+| `8–24 px` | 2 | shader intermediário |
+| `> 24 px` | 3 | shader completo |
+
+Há orçamento de planetas LOD 3 por preset: LOW 1, MEDIUM 2, HIGH 4, ULTRA 6. O shader recebe menos octaves e desativa nuvens/anéis complexos nos níveis inferiores.
+
+## Qualidade e draw calls
+
+Os presets controlam resolução interna, estrelas, nebulosas, quantidade de sistemas e orçamento de full-detail planets. Sem linhas orbitais e com todos os corpos visíveis, o número aproximado é:
+
+```text
+1 nebula + 1 starfield + 1 galaxy + 1 upscale
++ 1 pass por estrela/planeta visível
+```
+
+`?orbits=true` adiciona uma draw call por sistema visível. Corpos LOD 0 usam uma draw call de ponto, sem shader planetário.
+
+## Performance
+
+- Geração e paletas acontecem somente na criação do `Universe`.
+- Órbitas atualizam TypedArrays existentes.
+- VBOs não são recriados por frame.
+- Culling e scissor reduzem custo de fragmentos.
+- Não há `Math.random()` nem dependências externas.

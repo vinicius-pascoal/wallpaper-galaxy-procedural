@@ -11,6 +11,7 @@ export class TerranPlanet extends Planet {
       random.range(0.33, 0.43),
       random.range(-0.36, -0.24),
     ]);
+    this.position = this.centerNdc;
     this.radius = random.range(0.22, 0.3);
     this.terrainScale = random.range(4.4, 6.2);
     this.cloudScale = random.range(6.0, 8.0);
@@ -25,5 +26,6 @@ export class TerranPlanet extends Planet {
     this.seed01 = (this.seed >>> 0) / 4294967296;
     this.depth = 0.08;
     this.octaves = 5;
+    this.type = "terran";
   }
 }
