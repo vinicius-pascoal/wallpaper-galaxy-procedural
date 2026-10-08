@@ -91,6 +91,33 @@ export class PaletteGenerator {
     };
   }
 
+  static blackHole(seed) {
+    const random = new SeededRandom(hashSeed(seed, "black-hole-palette"));
+    const families = [0.045, 0.56, 0.82, 0.62, 0.98];
+    const hue = families[random.int(0, families.length)] + random.range(-0.025, 0.025);
+    const disk = hsvToRgb(hue, random.range(0.48, 0.82), random.range(0.68, 0.94));
+    const hot = hsvToRgb(hue + 0.035, random.range(0.35, 0.72), 1.0);
+    const cool = hsvToRgb(hue - 0.045, random.range(0.34, 0.7), random.range(0.45, 0.75));
+    return {
+      core: new Float32Array([0.008, 0.006, 0.018]),
+      disk: scaleColor(disk, 0.78),
+      hot,
+      cool,
+      glow: scaleColor(hot, 0.72),
+    };
+  }
+
+  static comet(seed) {
+    const random = new SeededRandom(hashSeed(seed, "comet-palette"));
+    const hue = random.range(0.52, 0.64);
+    return {
+      nucleus: hsvToRgb(hue + 0.04, random.range(0.12, 0.34), random.range(0.42, 0.7)),
+      coma: hsvToRgb(hue, random.range(0.22, 0.48), random.range(0.55, 0.86)),
+      dust: hsvToRgb(random.range(0.06, 0.14), random.range(0.32, 0.68), random.range(0.42, 0.7)),
+      ion: hsvToRgb(hue + 0.02, random.range(0.38, 0.76), random.range(0.62, 0.94)),
+    };
+  }
+
   static nebula(seed) {
     const random = new SeededRandom(hashSeed(seed, "nebula-palette"));
     const hueFamilies = [0.67, 0.82, 0.04, 0.56, 0.38, 0.94];

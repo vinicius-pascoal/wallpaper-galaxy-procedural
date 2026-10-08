@@ -22,6 +22,8 @@ index.html?view=galaxy
 index.html?planetGallery=true
 index.html?planetGallery=true&planetLayer=1
 index.html?planetGallery=true&referencePalette=false&referenceParams=false&animationDebugSpeed=10
+index.html?specialGallery=true
+index.html?blackHoleGallery=true&blackHoleLayer=disk
 ```
 
 Qualidades: `low`, `medium`, `high`, `ultra`.
@@ -43,6 +45,10 @@ Qualidades: `low`, `medium`, `high`, `ultra`.
 
 - Rotação axial procedural independente da órbita, com camadas de superfície/atmosfera em velocidades separadas.
 - Layers PixelPlanets portadas em multipass para Terran, Dry Terran, Islands, No Atmosphere, Gas, Lava, Ice e Star.
+- Black Holes procedurais com event horizon, disco de acreção animado e distorção local quantizada.
+- Cometas orbitais com núcleo, coma, cauda de poeira e cauda iônica opcional.
+- Shooting stars temporários, pulsars, sistemas binários e eventos cósmicos raros.
+- `cosmicActivity` determinística controla a personalidade de eventos sem alterar a estrutura base.
 
 ## Arquitetura
 
@@ -56,6 +62,7 @@ Qualidades: `low`, `medium`, `high`, `ultra`.
 - `LODManager` decide ponto, esfera simples, shader intermediário ou shader completo.
 - `ShaderLoader` resolve e cacheia includes GLSL.
 - `PlanetGallery` isola Terran, Gas, Lava, Ice, Dry Terran, Islands, No Atmosphere, luas e asteroide para validação layer-by-layer.
+- `CosmicEventSystem` agenda eventos pelo clock da Engine e mantém pool fixo para shooting stars.
 
 ## PixelPlanets
 
@@ -63,4 +70,4 @@ Qualidades: `low`, `medium`, `high`, `ultra`.
 
 ## Limitações atuais
 
-Luas e cinturões usam o orçamento de corpos LOD do preset. Cinturões são batches de point sprites com silhueta irregular aproximada; não há linhas orbitais de luas nem black holes/cometas nesta etapa.
+Luas, cinturões e objetos especiais usam o orçamento de corpos LOD do preset. Eventos não usam `setTimeout`; Black Hole, cometas e shooting stars são raros por seed e não há supernova destrutiva nesta etapa.

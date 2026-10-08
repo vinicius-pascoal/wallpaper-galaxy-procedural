@@ -13,6 +13,11 @@ export class LODManager {
     this.maxFullDetailBodies = maxFullDetailBodies;
     this.fullDetailPlanets = 0;
     this.fullDetailBodies = 0;
+    this.specialCounts = {
+      "black-hole": new Uint32Array(4),
+      comet: new Uint32Array(4),
+      pulsar: new Uint32Array(4),
+    };
   }
 
   beginFrame() {
@@ -20,6 +25,7 @@ export class LODManager {
     this.culled = 0;
     this.fullDetailPlanets = 0;
     this.fullDetailBodies = 0;
+    for (const counts of Object.values(this.specialCounts)) counts.fill(0);
   }
 
   classify(radiusNdc, internalHeight, isPlanet = true, priority = 0) {
@@ -40,7 +46,8 @@ export class LODManager {
       && Math.abs(position[0]) < 1.0 + Math.max(0.05, aspect * 0.02);
   }
 
-  record(level) {
+  record(level, kind = null) {
     this.counts[level] += 1;
+    if (kind && this.specialCounts[kind]) this.specialCounts[kind][level] += 1;
   }
 }

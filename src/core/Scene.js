@@ -1,5 +1,6 @@
 import { Universe } from "./Universe.js";
 import { PlanetGallery } from "./PlanetGallery.js";
+import { SpecialGallery } from "./SpecialGallery.js";
 
 const GALLERY_CAMERA = Object.freeze({
   getOffset(target) {
@@ -16,6 +17,7 @@ export class Scene {
     this.showPlanet = true;
     this.showOrbits = showOrbits;
     this.planetGallery = options.planetGallery ? new PlanetGallery(seed) : null;
+    this.specialGallery = options.specialGallery ? new SpecialGallery(seed) : null;
     this.planetLayer = options.planetLayer ?? "composite";
     this.universe = new Universe(seed, quality);
   }
@@ -27,6 +29,7 @@ export class Scene {
   update(time) {
     this.universe.update(time);
     this.planetGallery?.update(time.elapsed);
+    this.specialGallery?.update(time.elapsed);
   }
 
   render(renderer, camera, time) {
@@ -35,6 +38,14 @@ export class Scene {
         const light = body.kind === "star" ? null : this.planetGallery.light;
         renderer.renderBody(body, light, 3, time, GALLERY_CAMERA, this.planetLayer);
       }
+      return;
+    }
+    if (this.specialGallery) {
+      for (const body of this.specialGallery.bodies) {
+        const light = body.kind === "comet" ? this.specialGallery.light : null;
+        renderer.renderBody(body, light, 3, time, GALLERY_CAMERA, this.planetLayer);
+      }
+      renderer.renderShootingStars(this.specialGallery.shootingStars, GALLERY_CAMERA);
       return;
     }
     const showStars = this.view !== "galaxy";
@@ -50,6 +61,9 @@ export class Scene {
       renderer.renderPoints(this.universe.galaxyLayer, renderer.galaxyProgram, time, camera, this.universe.galaxy.rotationSpeed);
     }
     if (!isolatedView) {
+      if (this.universe.blackHole) {
+        this._renderBody(renderer, this.universe.blackHole, null, camera, time, 1);
+      }
       this._renderSystems(renderer, camera, time);
     }
   }
@@ -71,7 +85,16 @@ export class Scene {
         if (body.orbitDepth >= 0) continue;
         this._renderBody(renderer, body, system.star, camera, time, body === universe.terran ? 1 : 0);
       }
-      this._renderBody(renderer, system.star, null, camera, time);
+      const stars = system.stars.slice().sort((a, b) => (a.renderDepth ?? a.depth) - (b.renderDepth ?? b.depth));
+      for (const star of stars) {
+        if ((star.orbitDepth ?? 0) < 0) this._renderBody(renderer, star, null, camera, time);
+      }
+      if (stars.length === 1) {
+        this._renderBody(renderer, system.star, null, camera, time);
+      }
+      for (const star of stars) {
+        if ((star.orbitDepth ?? 0) >= 0 && stars.length > 1) this._renderBody(renderer, star, null, camera, time);
+      }
       for (const body of orbitingBodies) {
         if (body.orbitDepth < 0) continue;
         this._renderBody(renderer, body, system.star, camera, time, body === universe.terran ? 1 : 0);
@@ -79,7 +102,11 @@ export class Scene {
       if (system.asteroidBelt) {
         renderer.renderAsteroidBelt(system.asteroidBelt, system.asteroidBelt.frontData, system.asteroidBelt.frontCount, camera, time);
       }
+      for (const comet of system.comets) {
+        this._renderBody(renderer, comet, system.star, camera, time, 0);
+      }
     }
+    renderer.renderShootingStars(universe.cosmicEvents.shootingStars, camera);
   }
 
   _renderBody(renderer, body, star, camera, time, priority = 0) {
@@ -88,9 +115,10 @@ export class Scene {
       this.universe.lod.culled += 1;
       return;
     }
-    const isDetailBody = body.kind === "planet" || body.kind === "moon" || body.kind === "asteroid";
+    const isDetailBody = body.kind === "planet" || body.kind === "moon" || body.kind === "asteroid"
+      || body.kind === "black-hole" || body.kind === "comet" || body.kind === "pulsar";
     const level = this.universe.lod.classify(body.radius, renderer.internalHeight, isDetailBody, priority);
-    this.universe.lod.record(level);
+    this.universe.lod.record(level, body.kind);
     renderer.renderBody(body, star, level, time, camera, "composite");
   }
 

@@ -18,6 +18,7 @@ export class Nebula {
     this.opacity = new Float32Array(MAX_NEBULAE);
     this.speeds = new Float32Array(MAX_NEBULAE);
     this.seedOffsets = new Float32Array(MAX_NEBULAE * 2);
+    this.eventPulse = 0;
     this.colorA = new Float32Array(MAX_NEBULAE * 3);
     this.colorB = new Float32Array(MAX_NEBULAE * 3);
     this.colorC = new Float32Array(MAX_NEBULAE * 3);

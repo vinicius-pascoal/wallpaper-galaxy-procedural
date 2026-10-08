@@ -80,6 +80,22 @@ Cada camada pode ter seu próprio relógio: no Terran, terreno/oceano e nuvens u
 
 `PlanetFactory` agora cobre `TERRAN`, `DRY_TERRAN`, `ISLANDS`, `NO_ATMOSPHERE`, `ROCKY`, `GAS`, `LAVA` e `ICE`. Black hole permanece reservado e não é implementado nesta etapa.
 
+## Objetos especiais
+
+`Universe` cria no máximo um `BlackHole` por seed: aproximadamente 25% das seeds recebem um objeto central e aproximadamente 5% recebem um objeto de foreground. O renderer usa dois passes: `Event Horizon` opaco e disco de acreção com noise, FBM, movimento diferencial, máscara radial, dithering e distorção quantizada apenas na região local do disco.
+
+`Comet` pertence a um `SolarSystem` e usa órbita excêntrica. A cauda é calculada por `normalize(cometPosition - starPosition)`, garantindo orientação para longe da estrela. O shader combina núcleo irregular, coma, cauda de poeira quente e cauda iônica opcional.
+
+`Pulsar` é uma variante rara de estrela com núcleo, pulso de amplitude limitada e dois beams opostos de rotação lenta. `BinaryStarPair` atualiza duas estrelas ao redor do centro comum; planetas continuam orbitando o centro do sistema e usam a estrela primária como fonte dominante de luz.
+
+`CosmicEventSystem` usa um stream derivado da seed, clock da Engine, cooldown global e pool fixo de até três shooting stars. Os eventos atuais são shooting star, stellar flare, meteor shower e nebula pulse. Eventos não alteram seeds ou a estrutura de estrelas/planetas/luas/cinturões.
+
+## Ordem de renderização especial
+
+Nebula/starfield/galáxia → Black Hole local → cinturões traseiros → corpos e estrelas de sistemas → cinturões dianteiros → cometas → shooting stars. O pulsar e os binários participam da ordem normal de estrelas, e a câmera/parallax é aplicada por corpo.
+
+O debug `?specialGallery=true` (ou `?blackHoleGallery=true`) mostra Black Hole, cometa, pulsar, binário e shooting star. `blackHoleLayer=event-horizon`, `disk` ou `composite` isolam as camadas principais.
+
 ## LOD
 
 `LODManager` classifica pelo raio em pixels internos:

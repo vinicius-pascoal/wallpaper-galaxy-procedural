@@ -99,6 +99,18 @@ Islands reutiliza os três shaders de LandMasses (`Water → Land → Clouds`), 
 
 ## Asteroids
 
+## Black Hole
+
+Original: `Planets/BlackHole/BlackHole.gdshader`, `BlackHoleRing.gdshader`, `BlackHole.gd` e `BlackHole.tscn`.
+
+Novo: `src/celestial/BlackHole.js`, `shaders/black-hole/horizon.frag` e `shaders/black-hole/disk.frag`.
+
+O port preserva o horizonte quase preto e opaco, a borda posterizada, o disco com compressão/perspectiva, ruído circular, FBM, movimento temporal, dithering e paleta em cinco tons. A rotação do disco usa velocidade diferencial aproximada de 1.4x no interior, 1.0x no meio e 0.7x na borda. A distorção radial é discreta, quantizada no pixel grid e limitada ao scissor do Black Hole.
+
+## Comets, Pulsars e eventos
+
+Cometas reutilizam a linguagem de asteroides no shader `shaders/comet/comet.frag`, com núcleo irregular, coma, dust tail e ion tail. Pulsars usam `shaders/pulsar/pulsar.frag` com núcleo pulsante e beams opostos de baixa amplitude. Shooting stars usam `shaders/events/shooting-star.vert`/`.frag` e um pool de segmentos dinâmicos. `CosmicEventSystem` agenda flare estelar, meteor shower e nebula pulse sem timers externos.
+
 Original: `Planets/Asteroids/Asteroid.tscn`, `Asteroid.gd` e `Asteroids.gdshader`.
 
 Novo: `src/celestial/Asteroid.js`, `src/systems/AsteroidBelt.js`, `shaders/asteroid/asteroid.frag`, `shaders/asteroid/belt.vert` e `shaders/asteroid/belt.frag`.

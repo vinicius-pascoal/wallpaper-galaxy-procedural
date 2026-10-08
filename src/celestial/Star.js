@@ -36,9 +36,12 @@ export class Star extends CelestialBody {
     this.flareStrength = random.range(0.18, 0.5);
     this.activity = random.range(0.3, 0.86);
     this.luminosity = random.range(0.72, 1.0);
+    this.eventFlareBoost = 0;
+    this.orbitDepth = 0;
     this.palette = PaletteGenerator.star(this.seed, type);
     this.seed01 = (this.seed >>> 0) / 4294967296;
     this.depth = options.depth ?? 0.07;
+    this.renderDepth = this.depth;
     this.lod = 0;
   }
 

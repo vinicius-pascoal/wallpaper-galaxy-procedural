@@ -12,9 +12,10 @@ const query = new URLSearchParams(window.location.search);
 const requestedSeed = Number.parseInt(query.get("seed") ?? "", 10);
 const seed = Number.isFinite(requestedSeed) ? requestedSeed >>> 0 : DEFAULT_SEED;
 const planetGallery = query.get("planetGallery") === "true";
-const requestedQuality = query.get("quality") ?? (planetGallery ? "high" : undefined);
-const quality = planetGallery && String(requestedQuality).toLowerCase() !== "ultra" ? resolveQuality("high") : resolveQuality(requestedQuality);
-const debugEnabled = query.get("debug") === "true" || planetGallery;
+const specialGallery = query.get("specialGallery") === "true" || query.get("blackHoleGallery") === "true";
+const requestedQuality = query.get("quality") ?? (planetGallery || specialGallery ? "high" : undefined);
+const quality = (planetGallery || specialGallery) && String(requestedQuality).toLowerCase() !== "ultra" ? resolveQuality("high") : resolveQuality(requestedQuality);
+const debugEnabled = query.get("debug") === "true" || planetGallery || specialGallery;
 const view = query.get("view") ?? "all";
 const referencePalette = query.has("referencePalette") ? query.get("referencePalette") === "true" : planetGallery;
 const referenceParameters = query.has("referenceParams") ? query.get("referenceParams") === "true" : planetGallery;
@@ -29,7 +30,8 @@ async function boot() {
       view,
       showOrbits: query.get("orbits") === "true",
       planetGallery,
-      planetLayer: query.get("planetLayer") ?? "composite",
+      specialGallery,
+      planetLayer: query.get("blackHoleLayer") ?? query.get("planetLayer") ?? "composite",
       referencePalette,
       referenceParameters,
       animationDebugSpeed: Number.isFinite(animationDebugSpeed) ? animationDebugSpeed : 1,

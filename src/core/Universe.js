@@ -4,6 +4,9 @@ import { Nebula } from "../galaxy/Nebula.js";
 import { StarField } from "../galaxy/StarField.js";
 import { SystemGenerator } from "../procedural/SystemGenerator.js";
 import { LODManager } from "./LODManager.js";
+import { BlackHole } from "../celestial/BlackHole.js";
+import { CosmicEventSystem } from "../systems/CosmicEventSystem.js";
+import { SeededRandom } from "../procedural/SeededRandom.js";
 
 export class Universe {
   constructor(seed, quality) {
@@ -12,6 +15,17 @@ export class Universe {
     this.galaxy = new Galaxy(hashSeed(this.seed, "galaxy"), quality.galaxyCount);
     this.starField = new StarField(hashSeed(this.seed, "background-stars"), quality.starCount);
     this.nebula = new Nebula(hashSeed(this.seed, "nebulae"), quality.nebulaCount);
+    const blackHoleRoll = (hashSeed(this.seed, "black-hole-mode") >>> 0) / 4294967296;
+    this.blackHole = blackHoleRoll < 0.25
+      ? new BlackHole(hashSeed(this.seed, "central-black-hole"), { mode: "galactic-center", position: [0, 0], radius: 0.07, depth: 0.02 })
+      : blackHoleRoll < 0.30
+        ? new BlackHole(hashSeed(this.seed, "foreground-black-hole"), {
+          mode: "special",
+          position: [new SeededRandom(hashSeed(this.seed, "black-hole-x")).range(-0.68, 0.68), new SeededRandom(hashSeed(this.seed, "black-hole-y")).range(-0.5, 0.5)],
+          radius: 0.055,
+          depth: 0.028,
+        })
+        : null;
     this.lod = new LODManager(quality.maxFullDetailPlanets, quality.maxFullDetailBodies);
     this.systems = SystemGenerator.createSystems(hashSeed(this.seed, "solar-systems"), quality.systemCount, {
       forceHero: true,
@@ -26,6 +40,7 @@ export class Universe {
     this.terran = this.heroSystem.planets.find((planet) => planet.type === "terran") ?? null;
     this.starLayer = null;
     this.galaxyLayer = null;
+    this.cosmicEvents = new CosmicEventSystem(this.seed, quality);
   }
 
   upload(renderer) {
@@ -45,6 +60,7 @@ export class Universe {
     for (let index = 0; index < this.systems.length; index += 1) {
       this.systems[index].update(time.elapsed);
     }
+    this.cosmicEvents.update(time, this);
   }
 
   get stats() {
@@ -57,12 +73,23 @@ export class Universe {
       moonCount: this.systems.reduce((total, system) => total + system.moons.length, 0),
       asteroidBeltCount: this.systems.reduce((total, system) => total + (system.asteroidBelt ? 1 : 0), 0),
       asteroidCount: this.systems.reduce((total, system) => total + (system.asteroidBelt?.count ?? 0), 0),
+      cometCount: this.systems.reduce((total, system) => total + system.comets.length, 0),
+      binarySystemCount: this.systems.reduce((total, system) => total + (system.binary ? 1 : 0), 0),
+      pulsarCount: this.systems.reduce((total, system) => total + system.stars.filter((star) => star.kind === "pulsar").length, 0),
+      blackHoleCount: this.blackHole ? 1 : 0,
+      cosmicActivity: this.cosmicEvents.cosmicActivity,
+      activeShootingStars: this.cosmicEvents.shootingStars.activeCount,
+      nextEventType: this.cosmicEvents.nextEventType,
+      activeRareEvent: this.cosmicEvents.activeEvent,
       terranSeed: this.terran?.seed ?? 0,
       terranRadius: this.terran?.radius ?? 0,
       terranRotationSpeed: this.terran?.rotationSpeed ?? 0,
       terranCloudRotationSpeed: this.terran?.cloudRotationSpeed ?? 0,
       fbmOctaves: this.terran?.octaves ?? 0,
       lodCounts: this.lod.counts,
+      blackHoleLod: this.lod.specialCounts["black-hole"],
+      cometLod: this.lod.specialCounts.comet,
+      pulsarLod: this.lod.specialCounts.pulsar,
       culledBodies: this.lod.culled,
     };
   }

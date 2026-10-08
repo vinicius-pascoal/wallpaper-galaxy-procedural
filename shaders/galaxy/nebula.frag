@@ -27,6 +27,7 @@ uniform vec2 uSeedOffsets[MAX_NEBULAE];
 uniform vec3 uColorA[MAX_NEBULAE];
 uniform vec3 uColorB[MAX_NEBULAE];
 uniform vec3 uColorC[MAX_NEBULAE];
+uniform float uEventPulse;
 
 void main() {
     vec2 world = vec2((vUv.x - 0.5) * 2.0 * uAspect, (vUv.y - 0.5) * 2.0);
@@ -57,7 +58,7 @@ void main() {
 
         vec3 palette = mix(uColorA[index], uColorB[index], smoothstep(0.36, 0.7, cloud));
         palette = mix(palette, uColorC[index], smoothstep(0.63, 0.96, cloud));
-        float alpha = density * uOpacity[index] * uBrightness[index];
+        float alpha = density * uOpacity[index] * uBrightness[index] * (1.0 + uEventPulse);
         accumulated += palette * alpha;
         accumulatedAlpha = 1.0 - (1.0 - accumulatedAlpha) * (1.0 - alpha);
     }

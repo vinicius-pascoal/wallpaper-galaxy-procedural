@@ -33,6 +33,10 @@ export class Renderer {
     this.moonDrawCalls = 0;
     this.asteroidDrawCalls = 0;
     this.asteroidBeltDrawCalls = 0;
+    this.blackHoleDrawCalls = 0;
+    this.cometDrawCalls = 0;
+    this.pulsarDrawCalls = 0;
+    this.shootingStarDrawCalls = 0;
     this.starDrawCalls = 0;
     this._cameraOffset = new Float32Array(2);
     this._planetCenter = new Float32Array(2);
@@ -41,7 +45,7 @@ export class Renderer {
   }
 
   async initialize() {
-    const [fullscreenVertex, upscaleFragment, starsVertex, starsFragment, galaxyVertex, galaxyFragment, nebulaFragment, terranWaterFragment, terranLandFragment, terranCloudFragment, dryTerranLandFragment, gasLayersFragment, gasRingFragment, lavaLandFragment, lavaCratersFragment, lavaRiversFragment, iceLandFragment, iceLakesFragment, iceCloudsFragment, starBlobsFragment, starSurfaceFragment, starFlaresFragment, asteroidFragment, asteroidBeltVertex, asteroidBeltFragment, simplePointVertex, simplePointFragment, orbitVertex, orbitFragment] = await Promise.all([
+    const [fullscreenVertex, upscaleFragment, starsVertex, starsFragment, galaxyVertex, galaxyFragment, nebulaFragment, terranWaterFragment, terranLandFragment, terranCloudFragment, dryTerranLandFragment, gasLayersFragment, gasRingFragment, lavaLandFragment, lavaCratersFragment, lavaRiversFragment, iceLandFragment, iceLakesFragment, iceCloudsFragment, starBlobsFragment, starSurfaceFragment, starFlaresFragment, asteroidFragment, asteroidBeltVertex, asteroidBeltFragment, blackHoleHorizonFragment, blackHoleDiskFragment, cometFragment, pulsarFragment, shootingStarVertex, shootingStarFragment, simplePointVertex, simplePointFragment, orbitVertex, orbitFragment] = await Promise.all([
       this.loader.load("../common/fullscreen.vert"),
       this.loader.load("../common/upscale.frag"),
       this.loader.load("stars.vert"),
@@ -67,6 +71,12 @@ export class Renderer {
       this.loader.load("../asteroid/asteroid.frag"),
       this.loader.load("../asteroid/belt.vert"),
       this.loader.load("../asteroid/belt.frag"),
+      this.loader.load("../black-hole/horizon.frag"),
+      this.loader.load("../black-hole/disk.frag"),
+      this.loader.load("../comet/comet.frag"),
+      this.loader.load("../pulsar/pulsar.frag"),
+      this.loader.load("../events/shooting-star.vert"),
+      this.loader.load("../events/shooting-star.frag"),
       this.loader.load("../common/simple-point.vert"),
       this.loader.load("../common/simple-point.frag"),
       this.loader.load("../common/orbit.vert"),
@@ -105,6 +115,13 @@ export class Renderer {
     ];
     this.asteroidProgram = new ShaderProgram(gl, fullscreenVertex, asteroidFragment, "asteroid");
     this.asteroidBeltProgram = new ShaderProgram(gl, asteroidBeltVertex, asteroidBeltFragment, "asteroid-belt");
+    this.blackHolePrograms = [
+      new ShaderProgram(gl, fullscreenVertex, blackHoleHorizonFragment, "black-hole-horizon"),
+      new ShaderProgram(gl, fullscreenVertex, blackHoleDiskFragment, "black-hole-disk"),
+    ];
+    this.cometProgram = new ShaderProgram(gl, fullscreenVertex, cometFragment, "comet");
+    this.pulsarProgram = new ShaderProgram(gl, fullscreenVertex, pulsarFragment, "pulsar");
+    this.shootingStarProgram = new ShaderProgram(gl, shootingStarVertex, shootingStarFragment, "shooting-stars");
     this.simplePointProgram = new ShaderProgram(gl, simplePointVertex, simplePointFragment, "simple-point");
     this.orbitProgram = new ShaderProgram(gl, orbitVertex, orbitFragment, "orbit");
 
@@ -125,6 +142,8 @@ export class Renderer {
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
+
+    this.shootingLayer = this.createShootingLayer(3);
 
     this.gl.enable(this.gl.BLEND);
     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE);
@@ -172,6 +191,31 @@ export class Renderer {
     }
     gl.bindVertexArray(null);
     return { vao, buffer, capacity: data.length / 8, count: 0 };
+  }
+
+  createShootingLayer(maxActive = 3) {
+    const gl = this.gl;
+    const vao = gl.createVertexArray();
+    const buffer = gl.createBuffer();
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(maxActive * 2 * 6), gl.DYNAMIC_DRAW);
+    const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, stride, 0);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 1, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(2, 3, gl.FLOAT, false, stride, 3 * Float32Array.BYTES_PER_ELEMENT);
+    gl.bindVertexArray(null);
+    return { vao, buffer, maxActive, count: 0 };
+  }
+
+  updateShootingLayer(layer, data, count) {
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, layer.buffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, data.subarray(0, count * 2 * 6));
+    layer.count = count;
   }
 
   updateAsteroidLayer(layer, data, count) {
@@ -246,6 +290,10 @@ export class Renderer {
     this.moonDrawCalls = 0;
     this.asteroidDrawCalls = 0;
     this.asteroidBeltDrawCalls = 0;
+    this.blackHoleDrawCalls = 0;
+    this.cometDrawCalls = 0;
+    this.pulsarDrawCalls = 0;
+    this.shootingStarDrawCalls = 0;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.target.framebuffer);
     gl.viewport(0, 0, this.internalWidth, this.internalHeight);
     gl.disable(gl.SCISSOR_TEST);
@@ -293,6 +341,7 @@ export class Renderer {
     gl.uniform3fv(this.nebulaProgram.uniform("uColorA"), nebula.colorA);
     gl.uniform3fv(this.nebulaProgram.uniform("uColorB"), nebula.colorB);
     gl.uniform3fv(this.nebulaProgram.uniform("uColorC"), nebula.colorC);
+    gl.uniform1f(this.nebulaProgram.uniform("uEventPulse"), nebula.eventPulse ?? 0);
     gl.bindVertexArray(this.quadVao);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     this.drawCalls += 1;
@@ -334,6 +383,21 @@ export class Renderer {
     this.asteroidBeltDrawCalls += 1;
   }
 
+  renderShootingStars(system, camera) {
+    if (!system?.activeCount) return;
+    const gl = this.gl;
+    this.updateShootingLayer(this.shootingLayer, system.data, system.activeCount);
+    const offset = camera.getOffset(this._cameraOffset);
+    this.shootingStarProgram.use();
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.uniform1f(this.shootingStarProgram.uniform("uAspect"), this.aspect);
+    gl.uniform2f(this.shootingStarProgram.uniform("uCameraOffset"), offset[0], offset[1]);
+    gl.bindVertexArray(this.shootingLayer.vao);
+    gl.drawArrays(gl.LINES, 0, system.activeCount * 2);
+    this.drawCalls += 1;
+    this.shootingStarDrawCalls += 1;
+  }
+
   renderPlanet(planet, time, camera) {
     this.renderBody(planet, null, 3, time, camera, "composite");
   }
@@ -344,6 +408,7 @@ export class Renderer {
       this._renderSimpleBody(body, time, camera);
       return;
     }
+    this._activeTime = time;
     this._beginBodyScissor(body, camera);
     const layers = this._layersFor(body);
     for (let index = 0; index < layers.length; index += 1) {
@@ -357,6 +422,9 @@ export class Renderer {
 
   _bodyExtent(body) {
     if (body.kind === "star") return 2.0;
+    if (body.kind === "black-hole") return 3.0;
+    if (body.kind === "comet") return 6.0;
+    if (body.kind === "pulsar") return 2.0;
     if (body.kind === "asteroid") return 1.0;
     if (body.type === "gas") return body.hasRings === false && !this.referenceParameters ? 1.0 : 3.0;
     return 1.0;
@@ -380,6 +448,19 @@ export class Renderer {
   }
 
   _layersFor(body) {
+    if (body.kind === "black-hole") {
+      return [
+        { name: "event-horizon", program: this.blackHolePrograms[0], extent: 1, reference: REFERENCE_PLANET_CONFIG.blackHole.horizon },
+        { name: "disk", program: this.blackHolePrograms[1], extent: 3, reference: REFERENCE_PLANET_CONFIG.blackHole.disk },
+        { name: "distortion", program: this.blackHolePrograms[1], extent: 3, debugOnly: true, reference: REFERENCE_PLANET_CONFIG.blackHole.disk },
+      ];
+    }
+    if (body.kind === "comet") {
+      return [{ name: "composite", program: this.cometProgram, extent: 6, reference: REFERENCE_PLANET_CONFIG.comet.surface }];
+    }
+    if (body.kind === "pulsar") {
+      return [{ name: "core-beams", program: this.pulsarProgram, extent: 2, reference: REFERENCE_PLANET_CONFIG.pulsar.surface }];
+    }
     if (body.kind === "asteroid") {
       return [{ name: "surface", program: this.asteroidProgram, extent: 1, reference: REFERENCE_PLANET_CONFIG.asteroid.surface }];
     }
@@ -435,7 +516,7 @@ export class Renderer {
   }
 
   _shouldRenderLayer(layer, index, mode) {
-    if (!mode || mode === "composite") return true;
+    if (!mode || mode === "composite") return layer.debugOnly !== true;
     if (/^\d+$/.test(String(mode))) return index === Number(mode);
     return layer.name === String(mode).toLowerCase();
   }
@@ -450,7 +531,7 @@ export class Renderer {
     const pixels = this.referenceParameters
       ? reference.pixels
       : Math.max(10, Math.round(layerRadius * this.internalHeight));
-    const timeSpeed = reference.timeSpeed;
+    const timeSpeed = reference.timeSpeed ?? 0.2;
     const updateFactor = reference.updateFactor ?? 0.02;
     const layerTime = this.timeForShader(time) * this.animationDebugSpeed
       * (Math.round(reference.size ?? 1) * 2.0 / Math.max(timeSpeed, 0.0001)) * updateFactor;
@@ -489,8 +570,9 @@ export class Renderer {
     if (this.referenceParameters) {
       const defaults = body.kind === "star" ? [0.5, 0.5]
         : body.type === "gas" ? [-0.1, 0.3]
-          : body.type === "lava" || body.type === "ice" || body.type === "no-atmosphere" || body.type === "rocky" ? [0.3, 0.3]
-            : body.type === "asteroid" ? [0.25, 0.25] : [0.39, 0.39];
+        : body.type === "lava" || body.type === "ice" || body.type === "no-atmosphere" || body.type === "rocky" ? [0.3, 0.3]
+            : body.type === "asteroid" ? [0.25, 0.25]
+              : body.kind === "black-hole" ? [0.607, 0.444] : [0.39, 0.39];
       this._lightOrigin[0] = defaults[0];
       this._lightOrigin[1] = defaults[1];
       return this._lightOrigin;
@@ -520,6 +602,9 @@ export class Renderer {
     if (body.kind === "planet") this.planetDrawCalls += 1;
     if (body.kind === "moon") this.moonDrawCalls += 1;
     if (body.kind === "asteroid") this.asteroidDrawCalls += 1;
+    if (body.kind === "black-hole") this.blackHoleDrawCalls += 1;
+    if (body.kind === "comet") this.cometDrawCalls += 1;
+    if (body.kind === "pulsar") this.pulsarDrawCalls += 1;
   }
 
   _setLayerParams(program, body, layer, lod) {
@@ -532,7 +617,10 @@ export class Renderer {
     gl.uniform1f(program.uniform("uSize"), size);
     gl.uniform1i(program.uniform("uOctaves"), effectiveOctaves);
 
-    if (body.kind === "star") this._setStarLayerParams(program, body, layer, seed, size, effectiveOctaves);
+    if (body.kind === "black-hole") this._setBlackHoleLayerParams(program, body, layer, seed, size, effectiveOctaves);
+    else if (body.kind === "comet") this._setCometLayerParams(program, body, layer, seed, size, effectiveOctaves);
+    else if (body.kind === "pulsar") this._setPulsarLayerParams(program, body, layer, seed, size, effectiveOctaves);
+    else if (body.kind === "star") this._setStarLayerParams(program, body, layer, seed, size, effectiveOctaves);
     else if (body.kind === "asteroid") this._setAsteroidLayerParams(program, body, layer, seed, size, effectiveOctaves);
     else if (body.type === "dry-terran") this._setDryTerranLayerParams(program, body, layer, seed, size, effectiveOctaves);
     else if (body.type === "terran" || body.type === "islands") this._setTerranLayerParams(program, body, layer, seed, size, effectiveOctaves);
@@ -543,7 +631,9 @@ export class Renderer {
   }
 
   _proceduralLayerSize(body, layerName) {
-    if (body.kind === "star") return layerName === "surface" ? 4.463 : layerName === "blobs" ? 4.93 : 1.6;
+    if (body.kind === "star" || body.kind === "pulsar") return layerName === "surface" ? 4.463 : layerName === "blobs" ? 4.93 : 1.6;
+    if (body.kind === "black-hole") return layerName === "disk" ? 6.598 : 1;
+    if (body.kind === "comet") return 5;
     if (body.kind === "asteroid") return 5.294;
     if (body.type === "dry-terran") return 8;
     if (body.type === "terran" || body.type === "islands") return layerName === "clouds" ? body.cloudScale : body.terrainScale;
@@ -601,6 +691,58 @@ export class Renderer {
     for (let index = 0; index < 5; index += 1) this._setColor(program, `uColor${index}`, palette[index]);
     this._setLayerFloat(program, "uLightDistance1", this.referenceParameters ? layer.reference.lightDistance1 : 0.36);
     this._setLayerFloat(program, "uLightDistance2", this.referenceParameters ? layer.reference.lightDistance2 : 0.53);
+    this._setLayerFloat(program, "uSeed", seed);
+    this._setLayerFloat(program, "uSize", size);
+    this._setLayerInt(program, "uOctaves", octaves);
+  }
+
+  _setBlackHoleLayerParams(program, body, layer, seed, size, octaves) {
+    const ref = REFERENCE_PALETTES.blackHole;
+    if (layer.name === "event-horizon") {
+      const colors = this._colors(ref.horizon, [body.palette.core, body.palette.cool, body.palette.hot], 3);
+      this._setColor(program, "uCoreColor", colors[0]);
+      this._setColor(program, "uEdgeColor", colors[1]);
+      this._setColor(program, "uEdgeHotColor", colors[2]);
+      this._setLayerFloat(program, "uHorizonRadius", this.referenceParameters ? layer.reference.horizonRadius : 0.34);
+      this._setLayerFloat(program, "uLightWidth", this.referenceParameters ? layer.reference.lightWidth : 0.04);
+    } else {
+      const colors = this._colors(ref.disk, [body.palette.cool, body.palette.disk, body.palette.hot, body.palette.glow, body.palette.hot], 5);
+      for (let index = 0; index < 5; index += 1) this._setColor(program, `uColor${index}`, colors[index]);
+      this._setLayerFloat(program, "uDiskWidth", this.referenceParameters ? layer.reference.diskWidth : 0.08);
+      this._setLayerFloat(program, "uRingPerspective", this.referenceParameters ? layer.reference.ringPerspective : 10);
+      this._setLayerFloat(program, "uDistortionStrength", body.distortionStrength);
+      this.gl.uniform1i(program.uniform("uDistortionOnly"), layer.name === "distortion" ? 1 : 0);
+    }
+    this._setLayerFloat(program, "uSeed", seed);
+    this._setLayerFloat(program, "uSize", size);
+    this._setLayerInt(program, "uOctaves", octaves);
+  }
+
+  _setCometLayerParams(program, body, layer, seed, size, octaves) {
+    const ref = REFERENCE_PALETTES.comet;
+    const palette = this.referencePalette ? ref : body.palette;
+    this._setColor(program, "uNucleusColor", palette.nucleus, 1);
+    this._setColor(program, "uComaColor", palette.coma, 1);
+    this._setColor(program, "uDustColor", palette.dust, 1);
+    this._setColor(program, "uIonColor", palette.ion, 1);
+    this.gl.uniform2f(program.uniform("uTailDirection"), body.tailDirection[0], body.tailDirection[1]);
+    this._setLayerFloat(program, "uTailLength", body.tailLength / Math.max(layer.extent, 1));
+    this._setLayerFloat(program, "uTailWidth", body.tailWidth / Math.max(layer.extent, 1));
+    this._setLayerInt(program, "uIonTail", body.ionTail ? 1 : 0);
+    this._setLayerFloat(program, "uSeed", seed);
+    this._setLayerFloat(program, "uSize", size);
+    this._setLayerInt(program, "uOctaves", octaves);
+  }
+
+  _setPulsarLayerParams(program, body, layer, seed, size, octaves) {
+    const ref = REFERENCE_PALETTES.pulsar;
+    const colors = this.referencePalette ? ref : { core: body.palette.light, beam: body.palette.flare };
+    this._setColor(program, "uCoreColor", colors.core, 1);
+    this._setColor(program, "uBeamColor", colors.beam, 1);
+    this._setLayerFloat(program, "uPulseSpeed", body.pulseSpeed);
+    this._setLayerFloat(program, "uPulseAmplitude", body.pulseAmplitude);
+    this._setLayerFloat(program, "uBeamAngle", body.beamAngle + this.timeForShader(this._activeTime ?? { shaderElapsed: 0 }) * body.beamRotationSpeed);
+    this._setLayerFloat(program, "uBeamLength", body.beamLength);
     this._setLayerFloat(program, "uSeed", seed);
     this._setLayerFloat(program, "uSize", size);
     this._setLayerInt(program, "uOctaves", octaves);
@@ -746,6 +888,7 @@ export class Renderer {
       this._setLayerFloat(program, "uScale", this.referenceParameters ? layer.reference.scale : 1);
       this._setLayerFloat(program, "uCircleAmount", this.referenceParameters ? layer.reference.circleAmount : 2);
       this._setLayerFloat(program, "uCircleScale", this.referenceParameters ? layer.reference.circleScale : 1);
+      this._setLayerFloat(program, "uFlareBoost", body.eventFlareBoost ?? 0);
     }
     this._setLayerFloat(program, "uSeed", seed);
     this._setLayerFloat(program, "uSize", size);
@@ -780,10 +923,16 @@ export class Renderer {
     if (body.kind === "planet") this.planetDrawCalls += 1;
     if (body.kind === "moon") this.moonDrawCalls += 1;
     if (body.kind === "asteroid") this.asteroidDrawCalls += 1;
+    if (body.kind === "black-hole") this.blackHoleDrawCalls += 1;
+    if (body.kind === "comet") this.cometDrawCalls += 1;
+    if (body.kind === "pulsar") this.pulsarDrawCalls += 1;
   }
 
   _bodyColor(body) {
     if (body.kind === "star") return body.palette.base;
+    if (body.kind === "pulsar") return body.palette.light;
+    if (body.kind === "black-hole") return body.palette.hot;
+    if (body.kind === "comet") return body.palette.coma;
     if (body.type === "terran" || body.type === "dry-terran" || body.type === "islands") return body.palette.landBase;
     if (body.type === "gas") return body.palette.base;
     if (body.type === "lava" || body.type === "no-atmosphere" || body.type === "rocky") return body.palette.crust;

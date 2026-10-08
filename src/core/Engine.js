@@ -105,9 +105,20 @@ export class Engine {
       `Planet draws     ${renderer.planetDrawCalls}`,
       `Moon draws       ${renderer.moonDrawCalls}`,
       `Asteroid draws   ${renderer.asteroidDrawCalls}/${renderer.asteroidBeltDrawCalls}`,
+      `Black holes      ${stats.blackHoleCount}`,
+      `Comets           ${stats.cometCount}`,
+      `Pulsars          ${stats.pulsarCount}`,
+      `Binary systems   ${stats.binarySystemCount}`,
+      `Shooting stars   ${stats.activeShootingStars}`,
+      `Cosmic activity  ${stats.cosmicActivity.toFixed(2)}`,
+      `Next event       ${stats.nextEventType}`,
+      `Active event     ${stats.activeRareEvent}`,
+      `Special draws    ${renderer.blackHoleDrawCalls}/${renderer.cometDrawCalls}/${renderer.pulsarDrawCalls}/${renderer.shootingStarDrawCalls}`,
+      `Special LOD       BH ${stats.blackHoleLod.join("/")} C ${stats.cometLod.join("/")} P ${stats.pulsarLod.join("/")}`,
       `Quality          ${this.options.quality.name}`,
       `Seed             ${this.options.seed >>> 0}`,
       ...(this.options.planetGallery ? [`Gallery          ${this.scene.planetLayer}`, `Reference pal.   ${this.options.referencePalette ? "on" : "off"}`, `Reference params. ${this.options.referenceParameters ? "on" : "off"}`] : []),
+      ...(this.options.specialGallery ? [`Special gallery  ${this.scene.planetLayer}`] : []),
     ].join("\n");
     this.options.debugElement.hidden = false;
   }

@@ -19,6 +19,7 @@ uniform float uStormDitherWidth;
 uniform float uScale;
 uniform float uCircleAmount;
 uniform float uCircleScale;
+uniform float uFlareBoost;
 uniform float uSize;
 uniform int uOctaves;
 uniform bool uDitherEnabled;
@@ -61,6 +62,6 @@ void main() {
     }
     float interpolate = floor(secondaryNoise + circleValue);
     vec4 color = interpolate < 1.0 ? uColor0 : uColor1;
-    alpha *= step(secondaryNoise * 0.25, distanceToCenter);
+    alpha *= step(secondaryNoise * 0.25, distanceToCenter) * (1.0 + uFlareBoost);
     outColor = vec4(color.rgb, alpha * color.a);
 }
