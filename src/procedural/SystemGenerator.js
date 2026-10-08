@@ -84,7 +84,7 @@ export class SystemGenerator {
       const comets = CometGenerator.createForSystem(seed, star, position, cosmicActivity);
       const belt = random.chance(random.range(0.25, 0.4))
         ? new AsteroidBelt(hashSeed(seed, "asteroid-belt"), position, {
-          count: random.int(28, 52),
+          count: random.int(16, 30),
           innerRadius: random.range(0.29, 0.39),
           outerRadius: random.range(0.44, 0.58),
         })

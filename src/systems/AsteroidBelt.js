@@ -10,7 +10,7 @@ export class AsteroidBelt {
     this.palette = PaletteGenerator.asteroid(this.seed);
     this.position = systemPosition;
     const random = new SeededRandom(this.seed);
-    this.count = options.count ?? random.int(28, 55);
+    this.count = options.count ?? random.int(16, 32);
     this.innerRadius = options.innerRadius ?? random.range(0.30, 0.42);
     this.outerRadius = options.outerRadius ?? this.innerRadius + random.range(0.08, 0.18);
     this.inclination = options.inclination ?? random.range(0.7, 1.0);

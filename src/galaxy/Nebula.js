@@ -39,8 +39,8 @@ export class Nebula {
       this.thresholds[index] = random.range(0.39, 0.5);
       this.softness[index] = random.range(0.16, 0.27);
       this.warpStrength[index] = random.range(0.48, 0.92);
-      this.brightness[index] = random.range(0.42, 0.76);
-      this.opacity[index] = random.range(0.14, 0.3);
+      this.brightness[index] = random.range(0.36, 0.68);
+      this.opacity[index] = random.range(0.1, 0.22);
       this.speeds[index] = random.range(0.0016, 0.0055);
       this.seedOffsets[vectorOffset] = random.range(0, 100);
       this.seedOffsets[vectorOffset + 1] = random.range(0, 100);
