@@ -1,0 +1,66 @@
+:root {
+  color-scheme: dark;
+  background: #02030a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #02030a;
+}
+
+body {
+  position: relative;
+  font-family: system-ui, sans-serif;
+}
+
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  image-rendering: pixelated;
+}
+
+#loading,
+#error,
+#debug {
+  position: fixed;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#loading,
+#error {
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  padding: 0.8rem 1rem;
+  border: 1px solid rgba(154, 181, 255, 0.35);
+  border-radius: 4px;
+  background: rgba(3, 6, 20, 0.9);
+  color: #dce6ff;
+  font-size: 0.9rem;
+}
+
+#error {
+  max-width: min(34rem, 90vw);
+  color: #ffd3d3;
+  white-space: pre-wrap;
+}
+
+#debug {
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(154, 181, 255, 0.3);
+  background: rgba(3, 6, 20, 0.78);
+  color: #c9d7ff;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre;
+}
