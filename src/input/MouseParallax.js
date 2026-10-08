@@ -20,4 +20,9 @@ export class MouseParallax {
     this.x = 0;
     this.y = 0;
   }
+
+  dispose() {
+    this._element.removeEventListener("pointermove", this._onPointerMove);
+    this._element.removeEventListener("pointerleave", this._onPointerLeave);
+  }
 }

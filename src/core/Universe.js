@@ -9,14 +9,15 @@ import { CosmicEventSystem } from "../systems/CosmicEventSystem.js";
 import { SeededRandom } from "../procedural/SeededRandom.js";
 
 export class Universe {
-  constructor(seed, quality) {
+  constructor(seed, quality, options = {}) {
     this.seed = seed >>> 0;
     this.quality = quality;
+    this.options = options;
     this.galaxy = new Galaxy(hashSeed(this.seed, "galaxy"), quality.galaxyCount);
     this.starField = new StarField(hashSeed(this.seed, "background-stars"), quality.starCount);
     this.nebula = new Nebula(hashSeed(this.seed, "nebulae"), quality.nebulaCount);
     const blackHoleRoll = (hashSeed(this.seed, "black-hole-mode") >>> 0) / 4294967296;
-    this.blackHole = blackHoleRoll < 0.25
+    this.blackHole = options.specialObjects === false || options.blackHole === "off" ? null : options.blackHole === "on" || blackHoleRoll < 0.25
       ? new BlackHole(hashSeed(this.seed, "central-black-hole"), { mode: "galactic-center", position: [0, 0], radius: 0.07, depth: 0.02 })
       : blackHoleRoll < 0.30
         ? new BlackHole(hashSeed(this.seed, "foreground-black-hole"), {
@@ -29,6 +30,10 @@ export class Universe {
     this.lod = new LODManager(quality.maxFullDetailPlanets, quality.maxFullDetailBodies);
     this.systems = SystemGenerator.createSystems(hashSeed(this.seed, "solar-systems"), quality.systemCount, {
       forceHero: true,
+      moons: options.moons,
+      comets: options.comets,
+      asteroidBelts: options.asteroidBelts,
+      specialObjects: options.specialObjects,
       positions: [
         new Float32Array([0.12, -0.18]),
         new Float32Array([-0.58, 0.36]),
@@ -36,11 +41,11 @@ export class Universe {
         new Float32Array([-0.44, -0.46]),
       ],
     });
-    this.heroSystem = this.systems[0];
-    this.terran = this.heroSystem.planets.find((planet) => planet.type === "terran") ?? null;
+    this.heroSystem = this.systems[0] ?? null;
+    this.terran = this.heroSystem?.planets.find((planet) => planet.type === "terran") ?? null;
     this.starLayer = null;
     this.galaxyLayer = null;
-    this.cosmicEvents = new CosmicEventSystem(this.seed, quality);
+    this.cosmicEvents = new CosmicEventSystem(this.seed, quality, options);
   }
 
   upload(renderer) {
@@ -61,6 +66,31 @@ export class Universe {
       this.systems[index].update(time.elapsed);
     }
     this.cosmicEvents.update(time, this);
+  }
+
+  regenerate(newSeed, quality = this.quality, renderer = null, options = this.options) {
+    if (renderer) this.dispose(renderer);
+    const replacement = new Universe(newSeed, quality, options);
+    Object.assign(this, replacement);
+    if (renderer) this.upload(renderer);
+  }
+
+  applyOptions(options = {}) {
+    this.options = { ...this.options, ...options };
+    this.cosmicEvents.setConfig(this.options);
+  }
+
+  dispose(renderer) {
+    if (!renderer) return;
+    for (const system of this.systems) {
+      renderer.deleteLayer(system.orbitLayer);
+      renderer.deleteLayer(system.asteroidBelt?.backLayer);
+      renderer.deleteLayer(system.asteroidBelt?.frontLayer);
+    }
+    renderer.deleteLayer(this.starLayer);
+    renderer.deleteLayer(this.galaxyLayer);
+    this.starLayer = null;
+    this.galaxyLayer = null;
   }
 
   get stats() {

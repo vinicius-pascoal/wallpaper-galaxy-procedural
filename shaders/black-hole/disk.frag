@@ -19,6 +19,7 @@ uniform int uOctaves;
 uniform float uDiskWidth;
 uniform float uRingPerspective;
 uniform float uDistortionStrength;
+uniform float uAudioBoost;
 uniform bool uDistortionOnly;
 uniform bool uDitherEnabled;
 uniform vec2 uCenter;
@@ -80,5 +81,6 @@ void main() {
     vec3 color = posterized < 1.0 ? uColor0 : posterized < 2.0 ? uColor1 : posterized < 3.0 ? uColor2 : posterized < 4.0 ? uColor3 : uColor4;
     float alpha = step(0.15, disk);
     alpha *= 1.0 - smoothstep(0.02, 0.17, distanceToCenter);
+    alpha *= 1.0 + uAudioBoost * 0.12;
     outColor = vec4(color, alpha);
 }

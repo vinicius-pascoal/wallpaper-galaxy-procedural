@@ -29,4 +29,9 @@ export class Time {
       this._fpsFrames = 0;
     }
   }
+
+  reset(timestamp = 0) {
+    this._lastTimestamp = timestamp;
+    this.delta = 0;
+  }
 }

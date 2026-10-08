@@ -28,6 +28,9 @@ uniform vec3 uColorA[MAX_NEBULAE];
 uniform vec3 uColorB[MAX_NEBULAE];
 uniform vec3 uColorC[MAX_NEBULAE];
 uniform float uEventPulse;
+uniform float uIntensity;
+uniform float uAudioBoost;
+uniform float uColorMood;
 
 void main() {
     vec2 world = vec2((vUv.x - 0.5) * 2.0 * uAspect, (vUv.y - 0.5) * 2.0);
@@ -58,10 +61,15 @@ void main() {
 
         vec3 palette = mix(uColorA[index], uColorB[index], smoothstep(0.36, 0.7, cloud));
         palette = mix(palette, uColorC[index], smoothstep(0.63, 0.96, cloud));
-        float alpha = density * uOpacity[index] * uBrightness[index] * (1.0 + uEventPulse);
+        float alpha = density * uOpacity[index] * uBrightness[index] * uIntensity * (1.0 + uEventPulse + uAudioBoost * 0.12);
         accumulated += palette * alpha;
         accumulatedAlpha = 1.0 - (1.0 - accumulatedAlpha) * (1.0 - alpha);
     }
 
     outColor = vec4(accumulated, clamp(accumulatedAlpha, 0.0, 0.78));
+    if (uColorMood > 0.5 && uColorMood < 1.5) outColor.rgb = mix(outColor.rgb, vec3(0.16, 0.42, 1.0), 0.25);
+    else if (uColorMood > 1.5 && uColorMood < 2.5) outColor.rgb = mix(outColor.rgb, vec3(0.82, 0.12, 0.08), 0.22);
+    else if (uColorMood > 2.5 && uColorMood < 3.5) outColor.rgb = mix(outColor.rgb, vec3(0.44, 0.78, 1.0), 0.24);
+    else if (uColorMood > 3.5 && uColorMood < 4.5) outColor.rgb = mix(outColor.rgb, vec3(0.62, 0.28, 0.12), 0.2);
+    else if (uColorMood > 6.5 && uColorMood < 7.5) outColor.rgb *= 0.58;
 }

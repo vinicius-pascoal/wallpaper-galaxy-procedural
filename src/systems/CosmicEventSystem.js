@@ -4,9 +4,12 @@ import { SeededRandom } from "../procedural/SeededRandom.js";
 import { ShootingStarSystem } from "./ShootingStarSystem.js";
 
 export class CosmicEventSystem {
-  constructor(seed, quality) {
+  constructor(seed, quality, options = {}) {
     this.seed = seed >>> 0;
     this.quality = quality;
+    this.enabled = options.cosmicEvents !== false;
+    this.activityScale = { off: 0, low: 0.45, normal: 1, high: 1.45 }[options.cosmicActivity] ?? 1;
+    this.shootingStarMode = options.shootingStars ?? "normal";
     this.cosmicActivity = 0.18 + hash01(this.seed, "cosmic-activity") * 0.64;
     this.shootingStars = new ShootingStarSystem(hashSeed(this.seed, "shooting-stars"), quality.maxActiveShootingStars ?? 3);
     this.eventIndex = 0;
@@ -20,6 +23,10 @@ export class CosmicEventSystem {
 
   update(time, universe) {
     const elapsed = time.elapsed;
+    if (!this.enabled || this.activityScale <= 0 || this.shootingStarMode === "off") {
+      this.shootingStars.clear();
+      return;
+    }
     this.shootingStars.update(elapsed);
     if (this.activeEvent === "stellar-flare" && elapsed < this.activeUntil) {
       const phase = Math.min(1, Math.max(0, (elapsed - (this.activeUntil - 3.5)) / 3.5));
@@ -43,7 +50,7 @@ export class CosmicEventSystem {
     const roll = random.next();
     const duration = roll < 0.55 ? random.range(0.7, 1.5) : roll < 0.75 ? random.range(2, 5) : random.range(3, 7);
     if (roll < 0.55) {
-      this._spawnShootingStar(eventSeed, elapsed);
+      this._spawnShootingStar(eventSeed, elapsed, { brightness: this.shootingStarMode === "frequent" ? 0.72 : undefined });
       this.activeEvent = "shooting-star";
     } else if (roll < 0.75) {
       this._triggerFlare(universe, random, elapsed, duration);
@@ -52,7 +59,7 @@ export class CosmicEventSystem {
       universe.nebula.eventPulse = 0.14 + this.cosmicActivity * 0.1;
       this.activeEvent = "nebula-pulse";
     } else {
-      const count = Math.min(3, random.int(3, 9));
+      const count = Math.min(this.shootingStarMode === "frequent" ? 3 : 2, random.int(3, 9));
       for (let index = 0; index < count; index += 1) {
         this._spawnShootingStar(hashSeed(eventSeed, `meteor-${index}`), elapsed + index * 0.18, { duration: 0.8, brightness: 0.54 });
       }
@@ -60,14 +67,21 @@ export class CosmicEventSystem {
     }
     this.totalEvents += 1;
     this.activeUntil = elapsed + duration;
-    this.cooldownUntil = elapsed + Math.max(10, 20 - this.cosmicActivity * 7);
+    this.cooldownUntil = elapsed + Math.max(10, (20 - this.cosmicActivity * 7) / this.activityScale);
     this.eventIndex += 1;
-    this.nextEventTime = elapsed + 20 + (1 - this.cosmicActivity) * 70 + random.range(0, 18);
+    this.nextEventTime = elapsed + (20 + (1 - this.cosmicActivity) * 70 + random.range(0, 18)) / this.activityScale;
     this.nextEventType = roll < 0.55 ? "shooting-star" : roll < 0.75 ? "stellar-flare" : roll < 0.9 ? "nebula-pulse" : "meteor-shower";
   }
 
   _spawnShootingStar(seed, startTime, options = {}) {
     this.shootingStars.spawn(seed, startTime, options);
+  }
+
+  setConfig(options = {}) {
+    this.enabled = options.cosmicEvents !== false;
+    this.activityScale = { off: 0, low: 0.45, normal: 1, high: 1.45 }[options.cosmicActivity] ?? 1;
+    this.shootingStarMode = options.shootingStars ?? "normal";
+    if (!this.enabled || this.activityScale <= 0 || this.shootingStarMode === "off") this.shootingStars.clear();
   }
 
   _triggerFlare(universe, random, elapsed, duration) {

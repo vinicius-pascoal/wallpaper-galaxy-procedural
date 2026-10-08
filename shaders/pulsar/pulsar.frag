@@ -17,6 +17,7 @@ uniform float uPulseSpeed;
 uniform float uPulseAmplitude;
 uniform float uBeamAngle;
 uniform float uBeamLength;
+uniform float uAudioBoost;
 uniform vec2 uCenter;
 uniform vec2 uCameraOffset;
 uniform vec4 uCoreColor;
@@ -25,7 +26,7 @@ uniform vec4 uBeamColor;
 void main() {
     vec2 realUv = ppBodyUv(vUv, uAspect, uCenter, uCameraOffset, uDepth, uLayerRadius);
     vec2 uv = floor(realUv * uPixels) / uPixels - vec2(0.5);
-    float pulse = 0.92 + sin(uTime * uPulseSpeed) * uPulseAmplitude;
+    float pulse = 0.92 + sin(uTime * uPulseSpeed) * uPulseAmplitude + uAudioBoost * 0.06;
     float radius = length(uv);
     vec2 axis = vec2(cos(uBeamAngle), sin(uBeamAngle));
     float beamAlong = abs(dot(uv, axis));

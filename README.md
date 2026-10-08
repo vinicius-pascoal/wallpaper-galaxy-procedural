@@ -26,7 +26,27 @@ index.html?specialGallery=true
 index.html?blackHoleGallery=true&blackHoleLayer=disk
 ```
 
-Qualidades: `low`, `medium`, `high`, `ultra`.
+Qualidades: `low`, `medium`, `high`, `ultra`, `auto`.
+
+## Finalizacao / Wallpaper Engine
+
+O arquivo `project.json` descreve o wallpaper Web e suas propriedades. No Wallpaper Engine, importe a pasta como um wallpaper Web; o ponto de entrada e `index.html`. Em navegador comum, execute `python -m http.server 8080` na raiz e abra `http://localhost:8080/`.
+
+Propriedades de seed, preset, qualidade (`LOW`, `MEDIUM`, `HIGH`, `ULTRA`, `AUTO`), FPS (30/45/60/Unlimited), escala pixel, densidade, sistemas, eventos, camera e audio sao validadas em `src/wallpaper/WallpaperProperties.js`. Mudancas de brilho, audio, camera e linhas orbitais sao ao vivo; seed, qualidade, densidade, preset e corpos estruturais regeneram o universo com buffers antigos liberados.
+
+Presets disponiveis: Default, Deep Blue, Crimson Void, Frozen Cosmos, Ancient Galaxy, Nebula Fields, Black Hole, Silent Space, Audio Pulse e Chaos. Preset aplica uma configuracao inicial uma vez; seed continua deterministica e alteracoes manuais posteriores permanecem.
+
+Audio opcional: o Wallpaper Engine pode chamar `wallpaperRegisterAudioListener`. `WallpaperAudio` detecta o tamanho do spectrum, cria bass/lowMid/mid/highMid/treble, aplica gate e smoothing attack/release. Sem API ou sem audio, os valores decaem a zero e o universo continua animando. Para testar no navegador: `?debug=true&audioTest=true`.
+
+Exemplos:
+
+```text
+index.html?seed=583721&preset=Deep%20Blue&quality=high&fps=60
+index.html?quality=auto&debug=true
+index.html?audioTest=true&debug=true
+```
+
+O loop possui limitador temporal, pausa quando `document.visibilityState` fica oculto, retoma sem delta acumulado, resize agendado e tratamento de `webglcontextlost`/`webglcontextrestored`. A pasta `PixelPlanets-Wallpaper-Reference/` nao e necessaria em runtime.
 
 ## Current Features
 

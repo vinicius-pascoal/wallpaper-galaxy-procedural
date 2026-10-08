@@ -120,6 +120,20 @@ Os presets controlam resolução interna, estrelas, nebulosas, quantidade de sis
 
 `?orbits=true` adiciona uma draw call por sistema visível. Corpos LOD 0 usam uma draw call de ponto, sem shader planetário.
 
+## Ciclo final de produto
+
+`main.js` normaliza query parameters e registra o listener opcional do Wallpaper Engine. `WallpaperState` mantem uma configuracao validada e separa propriedades LIVE de propriedades que exigem regeneracao. `PresetManager` aplica ranges uma unica vez; o seed continua sendo a raiz deterministica da geracao.
+
+`WallpaperAudio` e a unica camada que recebe spectrum. Ela aceita Array ou TypedArray sem fixar o numero de bins, calcula cinco bandas, aplica threshold, clamp e smoothing attack/release e publica apenas valores normalizados. O `Scene` passa esses valores para o `Renderer`; orbitas, rotacao axial e estrutura procedural nao sao controladas pelo audio.
+
+O `Engine` usa delta temporal e um frame limiter de 30/45/60 FPS ou ilimitado. `PerformanceManager` mede janela de FPS/frame time e, em `AUTO`, reduz qualidade apos aproximadamente quatro segundos abaixo de 50 FPS e recupera uma etapa apos aproximadamente doze segundos acima de 58 FPS. A qualidade muda pela ordem dos presets, preservando a composicao antes de remover funcoes fundamentais.
+
+Quando a janela fica invisivel, o loop, audio smoothing e eventos sao pausados; ao voltar, o relogio e reiniciado para impedir delta gigante e eventos atrasados. Recursos de cena sao liberados ao regenerar seed/qualidade, incluindo VAOs, VBOs, framebuffers, texturas e programas. Eventos de contexto WebGL sao interceptados e os shaders/recursos sao reconstruidos quando o contexto retorna.
+
+### Ordem efetiva dos passes
+
+Nebula -> StarField -> Spiral Galaxy -> Black Hole -> belts traseiros -> corpos e estrelas dos sistemas -> belts dianteiros -> cometas -> shooting stars -> upscale pixel-art.
+
 ## Performance
 
 - Geração e paletas acontecem somente na criação do `Universe`.

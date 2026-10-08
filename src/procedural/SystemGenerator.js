@@ -43,7 +43,7 @@ export class SystemGenerator {
         radius: index === 0 ? random.range(0.04, 0.058) : random.range(0.018, 0.034),
         depth,
       });
-      if (random.chance(0.01 + cosmicActivity * 0.02)) {
+      if (options.specialObjects !== false && random.chance(0.01 + cosmicActivity * 0.02)) {
         star = new Pulsar(hashSeed(seed, "pulsar"), { radius: star.radius, depth });
       }
       const planetCount = options.forceHero && index === 0 ? Math.max(3, random.int(3, 6)) : SystemGenerator._planetCount(random);
@@ -69,8 +69,8 @@ export class SystemGenerator {
           : random.range(0.014, 0.032);
         planets[planetIndex] = PlanetFactory.create({ type, seed: planetSeed, radius, orbit, depth: depth + 0.01 });
       }
-      const moons = planets.flatMap((planet) => MoonGenerator.createForPlanet(planet));
-      const binary = !star.kind.includes("pulsar") && random.chance(0.08 + random.range(0, 0.07))
+      const moons = options.moons === false ? [] : planets.flatMap((planet) => MoonGenerator.createForPlanet(planet));
+      const binary = options.specialObjects !== false && !star.kind.includes("pulsar") && random.chance(0.08 + random.range(0, 0.07))
         ? new BinaryStarPair(
           star,
           new Star(hashSeed(seed, "binary-companion"), {
@@ -81,8 +81,8 @@ export class SystemGenerator {
           hashSeed(seed, "binary-pair"),
         )
         : null;
-      const comets = CometGenerator.createForSystem(seed, star, position, cosmicActivity);
-      const belt = random.chance(random.range(0.25, 0.4))
+      const comets = options.comets === false ? [] : CometGenerator.createForSystem(seed, star, position, cosmicActivity);
+      const belt = options.asteroidBelts === "off" || options.asteroidBelts === false ? null : random.chance(random.range(0.25, 0.4))
         ? new AsteroidBelt(hashSeed(seed, "asteroid-belt"), position, {
           count: random.int(16, 30),
           innerRadius: random.range(0.29, 0.39),

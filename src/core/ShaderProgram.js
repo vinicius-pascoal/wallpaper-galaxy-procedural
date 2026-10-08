@@ -40,4 +40,12 @@ export class ShaderProgram {
     }
     return this.uniforms.get(name);
   }
+
+  dispose() {
+    if (this.handle) {
+      this.gl.deleteProgram(this.handle);
+      this.handle = null;
+    }
+    this.uniforms.clear();
+  }
 }

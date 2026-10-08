@@ -56,6 +56,12 @@ export class ShootingStarSystem {
     }
   }
 
+  clear() {
+    for (const event of this.pool) event.active = false;
+    this.activeCount = 0;
+    this.data.fill(0);
+  }
+
   _write(offset, x, y, alpha, color) {
     this.data[offset] = x;
     this.data[offset + 1] = y;

@@ -13,13 +13,14 @@ const GALLERY_CAMERA = Object.freeze({
 export class Scene {
   constructor(seed, quality, view = "all", showOrbits = false, options = {}) {
     this.view = view;
-    this.showNebulae = true;
+    this.config = options.config ?? {};
+    this.showNebulae = this.config.nebulaEnabled !== false;
     this.showPlanet = true;
-    this.showOrbits = showOrbits;
+    this.showOrbits = this.config.orbitLines ?? showOrbits;
     this.planetGallery = options.planetGallery ? new PlanetGallery(seed) : null;
     this.specialGallery = options.specialGallery ? new SpecialGallery(seed) : null;
     this.planetLayer = options.planetLayer ?? "composite";
-    this.universe = new Universe(seed, quality);
+    this.universe = new Universe(seed, quality, this.config);
   }
 
   initialize(renderer) {
@@ -51,16 +52,28 @@ export class Scene {
     const showStars = this.view !== "galaxy";
     const showGalaxy = this.view !== "stars";
     const isolatedView = this.view === "stars" || this.view === "galaxy";
+    const audio = this.config.audioReactive === false ? {} : (this.config.audioState ?? {});
+    const motion = { off: 0, low: 0.35, normal: 1, high: 1.35 }[this.config.motionIntensity] ?? 1;
     if (showStars && this.showNebulae && !isolatedView) {
-      renderer.renderNebulae(this.universe.nebula, time, camera);
+      renderer.renderNebulae(this.universe.nebula, time, camera, {
+        intensity: this.config.nebulaIntensity ?? 1,
+        audioBoost: ((audio.lowMid ?? 0) + (audio.mid ?? 0)) * 0.12 * (this.config.nebulaReactivity ?? 1),
+      });
     }
     if (showStars) {
-      renderer.renderPoints(this.universe.starLayer, renderer.starsProgram, time, camera, 0);
+      renderer.renderPoints(this.universe.starLayer, renderer.starsProgram, time, camera, 0, {
+        brightness: 1 + (audio.bass ?? 0) * 0.08 * (this.config.starReactivity ?? 1),
+        audioBoost: ((audio.highMid ?? 0) + (audio.treble ?? 0)) * 0.7 * (this.config.starReactivity ?? 1),
+      });
     }
     if (showGalaxy) {
-      renderer.renderPoints(this.universe.galaxyLayer, renderer.galaxyProgram, time, camera, this.universe.galaxy.rotationSpeed);
+      renderer.renderPoints(this.universe.galaxyLayer, renderer.galaxyProgram, time, camera, this.universe.galaxy.rotationSpeed * (this.config.galaxyRotationSpeed ?? 1) * motion, {
+        brightness: (this.config.galaxyBrightness ?? 1) * (this.config.galacticDust === false ? 0.58 : 1),
+        audioBoost: (audio.bass ?? 0) * 0.14,
+        rotationMultiplier: motion,
+      });
     }
-    if (!isolatedView) {
+    if (!isolatedView && this.config.specialObjects !== false) {
       if (this.universe.blackHole) {
         this._renderBody(renderer, this.universe.blackHole, null, camera, time, 1);
       }
@@ -69,6 +82,7 @@ export class Scene {
   }
 
   _renderSystems(renderer, camera, time) {
+    if (this.config.solarSystemsEnabled === false) return;
     const universe = this.universe;
     universe.lod.beginFrame();
     for (let systemIndex = universe.systems.length - 1; systemIndex >= 0; systemIndex -= 1) {
@@ -124,6 +138,20 @@ export class Scene {
 
   toggleNebulae() {
     this.showNebulae = !this.showNebulae;
+  }
+
+  applyConfig(config = {}) {
+    this.config = { ...this.config, ...config };
+    this.showNebulae = this.config.nebulaEnabled !== false;
+    this.showOrbits = this.config.orbitLines === true;
+    this.universe.applyOptions(this.config);
+  }
+
+  regenerate(seed, quality, renderer, config = this.config) {
+    this.config = config;
+    this.universe.regenerate(seed, quality, renderer, config);
+    this.showNebulae = config.nebulaEnabled !== false;
+    this.showOrbits = config.orbitLines === true;
   }
 
   togglePlanet() {

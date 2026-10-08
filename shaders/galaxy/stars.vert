@@ -15,6 +15,8 @@ uniform float uZoom;
 uniform float uInternalHeight;
 uniform vec2 uCameraOffset;
 uniform float uGalaxyRotation;
+uniform float uBrightnessScale;
+uniform float uAudioBoost;
 
 out float vBrightness;
 out float vTemperature;
@@ -26,7 +28,7 @@ void main() {
     position *= uZoom;
     gl_Position = vec4(position.x / uAspect, position.y, 0.0, 1.0);
     gl_PointSize = min(7.0, max(1.0, aSize * (0.92 + 0.08 * twinkle)));
-    vBrightness = aBrightness;
+    vBrightness = aBrightness * uBrightnessScale * (1.0 + uAudioBoost * 0.08);
     vTemperature = aTemperature;
     vTwinkle = twinkle;
 }

@@ -18,6 +18,7 @@ uniform float uSize;
 uniform int uOctaves;
 uniform float uTailLength;
 uniform float uTailWidth;
+uniform float uAudioBoost;
 uniform int uIonTail;
 uniform vec2 uCenter;
 uniform vec2 uCameraOffset;
@@ -42,7 +43,7 @@ void main() {
     float nucleusNoise = ppFbmUnit((ppRotate(uv, uRotation) + vec2(2.0)) * uSize, uSize, uSeed + 4.0, uOctaves);
     float nucleus = step(length(centered), 0.075 + (nucleusNoise - 0.5) * 0.05);
     vec3 color = uDustColor.rgb;
-    float alpha = dust * (0.18 + noise * 0.3);
+    float alpha = dust * (0.18 + noise * 0.3) * (1.0 + uAudioBoost * 0.12);
     if (ion > alpha) { color = uIonColor.rgb; alpha = ion * 0.42; }
     if (coma > alpha) { color = uComaColor.rgb; alpha = coma * 0.26; }
     if (nucleus > 0.0) { color = uNucleusColor.rgb; alpha = 0.96; }

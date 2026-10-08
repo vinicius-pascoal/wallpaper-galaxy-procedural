@@ -42,6 +42,7 @@ export class Renderer {
     this._planetCenter = new Float32Array(2);
     this._lightDirection = new Float32Array(2);
     this._lightOrigin = new Float32Array(2);
+    this.contextLost = false;
   }
 
   async initialize() {
@@ -143,11 +144,12 @@ export class Renderer {
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
 
-    this.shootingLayer = this.createShootingLayer(3);
+    this.shootingLayer = this.createShootingLayer(this.quality.maxActiveShootingStars ?? 3);
 
     this.gl.enable(this.gl.BLEND);
     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE);
     this.resize();
+    this.contextLost = false;
   }
 
   createPointLayer(data) {
@@ -240,7 +242,7 @@ export class Renderer {
   }
 
   resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = this.options.useDevicePixelRatio === true ? Math.min(window.devicePixelRatio || 1, 2) : 1;
     const displayWidth = Math.max(1, Math.floor(this.canvas.clientWidth * dpr));
     const displayHeight = Math.max(1, Math.floor(this.canvas.clientHeight * dpr));
     if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
@@ -297,13 +299,14 @@ export class Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.target.framebuffer);
     gl.viewport(0, 0, this.internalWidth, this.internalHeight);
     gl.disable(gl.SCISSOR_TEST);
-    gl.clearColor(0.003, 0.005, 0.018, 1);
+    const background = this.options.config?.deepBlackBackground ? 0.0005 : 0.003;
+    gl.clearColor(background, background * 1.4, background * 5.5, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
   }
 
-  renderPoints(layer, program, time, camera, rotationSpeed) {
+  renderPoints(layer, program, time, camera, rotationSpeed, visual = {}) {
     const gl = this.gl;
     const offset = camera.getOffset(this._cameraOffset);
     program.use();
@@ -312,14 +315,18 @@ export class Renderer {
     gl.uniform2f(program.uniform("uCameraOffset"), offset[0], offset[1]);
     gl.uniform1f(program.uniform("uAspect"), this.aspect);
     gl.uniform1f(program.uniform("uZoom"), camera.zoom);
-    gl.uniform1f(program.uniform("uGalaxyRotation"), time.shaderElapsed * rotationSpeed);
+    gl.uniform1f(program.uniform("uGalaxyRotation"), time.shaderElapsed * rotationSpeed * (visual.rotationMultiplier ?? 1));
+    gl.uniform1f(program.uniform("uBrightnessScale"), visual.brightness ?? 1);
+    gl.uniform1f(program.uniform("uAudioBoost"), visual.audioBoost ?? 0);
+    gl.uniform1f(program.uniform("uColorMood"), this._colorMood());
     gl.uniform1f(program.uniform("uInternalHeight"), this.internalHeight);
     gl.bindVertexArray(layer.vao);
     gl.drawArrays(gl.POINTS, 0, layer.count);
     this.drawCalls += 1;
   }
 
-  renderNebulae(nebula, time, camera) {
+  renderNebulae(nebula, time, camera, visual = {}) {
+    if (!nebula?.count) return;
     const gl = this.gl;
     const offset = camera.getOffset(this._cameraOffset);
     this.nebulaProgram.use();
@@ -342,6 +349,9 @@ export class Renderer {
     gl.uniform3fv(this.nebulaProgram.uniform("uColorB"), nebula.colorB);
     gl.uniform3fv(this.nebulaProgram.uniform("uColorC"), nebula.colorC);
     gl.uniform1f(this.nebulaProgram.uniform("uEventPulse"), nebula.eventPulse ?? 0);
+    gl.uniform1f(this.nebulaProgram.uniform("uIntensity"), visual.intensity ?? 1);
+    gl.uniform1f(this.nebulaProgram.uniform("uAudioBoost"), visual.audioBoost ?? 0);
+    gl.uniform1f(this.nebulaProgram.uniform("uColorMood"), this._colorMood());
     gl.bindVertexArray(this.quadVao);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     this.drawCalls += 1;
@@ -418,6 +428,38 @@ export class Renderer {
       this._renderLayer(body, star, layer, lod, time, camera);
     }
     this.gl.disable(this.gl.SCISSOR_TEST);
+  }
+
+  applyOptions(options = {}) {
+    this.options = { ...this.options, ...options };
+  }
+
+  deleteLayer(layer) {
+    if (!layer || !this.gl) return;
+    this.gl.deleteVertexArray(layer.vao);
+    this.gl.deleteBuffer(layer.buffer);
+  }
+
+  handleContextLost() {
+    this.contextLost = true;
+    // WebGL invalidates all GPU handles on loss; force framebuffer recreation
+    // when the browser restores the context.
+    this.target = null;
+  }
+
+  dispose() {
+    const gl = this.gl;
+    if (!gl) return;
+    this.deleteLayer(this.shootingLayer);
+    this.deleteLayer(this.simplePointVao ? { vao: this.simplePointVao, buffer: this.simplePointBuffer } : null);
+    this.deleteLayer(this.quadVao ? { vao: this.quadVao, buffer: this.quadBuffer } : null);
+    if (this.target) {
+      gl.deleteFramebuffer(this.target.framebuffer);
+      gl.deleteTexture(this.target.texture);
+      this.target = null;
+    }
+    const programs = [this.upscaleProgram, this.starsProgram, this.galaxyProgram, this.nebulaProgram, ...(this.terranPrograms ?? []), this.dryTerranProgram, ...(this.gasPrograms ?? []), ...(this.lavaPrograms ?? []), ...(this.icePrograms ?? []), ...(this.starPrograms ?? []), this.asteroidProgram, this.asteroidBeltProgram, ...(this.blackHolePrograms ?? []), this.cometProgram, this.pulsarProgram, this.shootingStarProgram, this.simplePointProgram, this.orbitProgram];
+    for (const program of programs) program?.dispose?.();
   }
 
   _bodyExtent(body) {
@@ -711,6 +753,7 @@ export class Renderer {
       this._setLayerFloat(program, "uDiskWidth", this.referenceParameters ? layer.reference.diskWidth : 0.08);
       this._setLayerFloat(program, "uRingPerspective", this.referenceParameters ? layer.reference.ringPerspective : 10);
       this._setLayerFloat(program, "uDistortionStrength", body.distortionStrength);
+      this._setLayerFloat(program, "uAudioBoost", this._audioValue("bass") * 1.0);
       this.gl.uniform1i(program.uniform("uDistortionOnly"), layer.name === "distortion" ? 1 : 0);
     }
     this._setLayerFloat(program, "uSeed", seed);
@@ -728,6 +771,7 @@ export class Renderer {
     this.gl.uniform2f(program.uniform("uTailDirection"), body.tailDirection[0], body.tailDirection[1]);
     this._setLayerFloat(program, "uTailLength", body.tailLength / Math.max(layer.extent, 1));
     this._setLayerFloat(program, "uTailWidth", body.tailWidth / Math.max(layer.extent, 1));
+    this._setLayerFloat(program, "uAudioBoost", this._audioValue("mid"));
     this._setLayerInt(program, "uIonTail", body.ionTail ? 1 : 0);
     this._setLayerFloat(program, "uSeed", seed);
     this._setLayerFloat(program, "uSize", size);
@@ -743,6 +787,7 @@ export class Renderer {
     this._setLayerFloat(program, "uPulseAmplitude", body.pulseAmplitude);
     this._setLayerFloat(program, "uBeamAngle", body.beamAngle + this.timeForShader(this._activeTime ?? { shaderElapsed: 0 }) * body.beamRotationSpeed);
     this._setLayerFloat(program, "uBeamLength", body.beamLength);
+    this._setLayerFloat(program, "uAudioBoost", this._audioValue("treble"));
     this._setLayerFloat(program, "uSeed", seed);
     this._setLayerFloat(program, "uSize", size);
     this._setLayerInt(program, "uOctaves", octaves);
@@ -888,7 +933,7 @@ export class Renderer {
       this._setLayerFloat(program, "uScale", this.referenceParameters ? layer.reference.scale : 1);
       this._setLayerFloat(program, "uCircleAmount", this.referenceParameters ? layer.reference.circleAmount : 2);
       this._setLayerFloat(program, "uCircleScale", this.referenceParameters ? layer.reference.circleScale : 1);
-      this._setLayerFloat(program, "uFlareBoost", body.eventFlareBoost ?? 0);
+      this._setLayerFloat(program, "uFlareBoost", (body.eventFlareBoost ?? 0) + this._audioValue("bass") * 0.15 * (this.options.config?.starReactivity ?? 1));
     }
     this._setLayerFloat(program, "uSeed", seed);
     this._setLayerFloat(program, "uSize", size);
@@ -901,6 +946,16 @@ export class Renderer {
 
   _setLayerInt(program, name, value) {
     this.gl.uniform1i(program.uniform(name), value);
+  }
+
+  _audioValue(name) {
+    if (this.options.config?.audioReactive === false) return 0;
+    return Math.min(1, Math.max(0, Number(this.options.config?.audioState?.[name] ?? 0)));
+  }
+
+  _colorMood() {
+    const moods = { default: 0, blue: 1, crimson: 2, frozen: 3, ancient: 4, nebula: 5, blackhole: 6, silent: 7, audio: 8, chaos: 9 };
+    return moods[this.options.config?.paletteMood ?? "default"] ?? 0;
   }
 
   _renderSimpleBody(body, time, camera) {
@@ -945,7 +1000,8 @@ export class Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.disable(gl.BLEND);
-    gl.clearColor(0.003, 0.005, 0.018, 1);
+    const background = this.options.config?.deepBlackBackground ? 0.0005 : 0.003;
+    gl.clearColor(background, background * 1.4, background * 5.5, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     this.upscaleProgram.use();
     gl.activeTexture(gl.TEXTURE0);
