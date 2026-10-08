@@ -6,16 +6,21 @@ export class ShaderLoader {
 
   async load(path) {
     const url = new URL(path, this.baseUrl).href;
-    return this._loadUrl(url, []);
+    return this._loadUrl(url, [], new Set());
   }
 
-  async _loadUrl(url, stack) {
-    if (this.cache.has(url)) {
-      return this.cache.get(url);
-    }
+  async _loadUrl(url, stack, included) {
     if (stack.includes(url)) {
       throw new Error(`Ciclo de include GLSL detectado: ${[...stack, url].join(" → ")}`);
     }
+    if (included.has(url)) {
+      return "";
+    }
+    if (this.cache.has(url)) {
+      included.add(url);
+      return this.cache.get(url);
+    }
+    included.add(url);
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -30,7 +35,7 @@ export class ShaderLoader {
     for (const match of source.matchAll(includePattern)) {
       result += source.slice(cursor, match.index);
       const includeUrl = new URL(match[1], url).href;
-      result += await this._loadUrl(includeUrl, [...stack, url]);
+      result += await this._loadUrl(includeUrl, [...stack, url], included);
       cursor = match.index + match[0].length;
     }
     result += source.slice(cursor);

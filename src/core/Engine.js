@@ -24,12 +24,16 @@ export class Engine {
     this.running = false;
     this._boundFrame = this._frame.bind(this);
     this._boundResize = this._resize.bind(this);
+    this._boundKeyDown = this._onKeyDown.bind(this);
   }
 
   async _initialize() {
     await this.renderer.initialize();
     this.scene.initialize(this.renderer);
     window.addEventListener("resize", this._boundResize, { passive: true });
+    if (this.options.debug) {
+      window.addEventListener("keydown", this._boundKeyDown, { passive: true });
+    }
     this._resize();
   }
 
@@ -43,6 +47,14 @@ export class Engine {
 
   _resize() {
     this.renderer.resize();
+  }
+
+  _onKeyDown(event) {
+    if (event.key.toLowerCase() === "n") {
+      this.scene.toggleNebulae();
+    } else if (event.key.toLowerCase() === "p") {
+      this.scene.togglePlanet();
+    }
   }
 
   _frame(timestamp) {
@@ -74,8 +86,12 @@ export class Engine {
       `Internal         ${renderer.internalWidth}×${renderer.internalHeight}`,
       `Stars            ${stats.starCount}`,
       `Galaxy stars     ${stats.galaxyCount}`,
+      `Nebulae          ${stats.nebulaCount}`,
       `Systems          ${stats.systemCount}`,
       `Planets          ${stats.planetCount}`,
+      `Terran seed      ${stats.terranSeed}`,
+      `Terran radius    ${stats.terranRadius.toFixed(3)}`,
+      `FBM octaves      ${stats.fbmOctaves}`,
       `Draw calls       ${renderer.drawCalls}`,
       `Quality          ${this.options.quality.name}`,
       `Seed             ${this.options.seed >>> 0}`,

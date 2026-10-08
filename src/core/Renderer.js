@@ -25,22 +25,27 @@ export class Renderer {
     this.aspect = 1;
     this.drawCalls = 0;
     this._cameraOffset = new Float32Array(2);
+    this._planetCenter = new Float32Array(2);
   }
 
   async initialize() {
-    const [fullscreenVertex, upscaleFragment, starsVertex, starsFragment, galaxyVertex, galaxyFragment] = await Promise.all([
+    const [fullscreenVertex, upscaleFragment, starsVertex, starsFragment, galaxyVertex, galaxyFragment, nebulaFragment, terranFragment] = await Promise.all([
       this.loader.load("../common/fullscreen.vert"),
       this.loader.load("../common/upscale.frag"),
       this.loader.load("stars.vert"),
       this.loader.load("stars.frag"),
       this.loader.load("galaxy.vert"),
       this.loader.load("galaxy.frag"),
+      this.loader.load("nebula.frag"),
+      this.loader.load("../planets/terran.frag"),
     ]);
 
     const gl = this.gl;
     this.upscaleProgram = new ShaderProgram(gl, fullscreenVertex, upscaleFragment, "upscale");
     this.starsProgram = new ShaderProgram(gl, starsVertex, starsFragment, "stars");
     this.galaxyProgram = new ShaderProgram(gl, galaxyVertex, galaxyFragment, "galaxy");
+    this.nebulaProgram = new ShaderProgram(gl, fullscreenVertex, nebulaFragment, "nebula");
+    this.terranProgram = new ShaderProgram(gl, fullscreenVertex, terranFragment, "terran");
 
     this.quadVao = gl.createVertexArray();
     this.quadBuffer = gl.createBuffer();
@@ -141,6 +146,7 @@ export class Renderer {
     const gl = this.gl;
     const offset = camera.getOffset(this._cameraOffset);
     program.use();
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.uniform1f(program.uniform("uTime"), time.elapsed);
     gl.uniform2f(program.uniform("uCameraOffset"), offset[0], offset[1]);
     gl.uniform1f(program.uniform("uAspect"), this.aspect);
@@ -149,6 +155,75 @@ export class Renderer {
     gl.uniform1f(program.uniform("uInternalHeight"), this.internalHeight);
     gl.bindVertexArray(layer.vao);
     gl.drawArrays(gl.POINTS, 0, layer.count);
+    this.drawCalls += 1;
+  }
+
+  renderNebulae(nebula, time, camera) {
+    const gl = this.gl;
+    const offset = camera.getOffset(this._cameraOffset);
+    this.nebulaProgram.use();
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.uniform1f(this.nebulaProgram.uniform("uTime"), time.elapsed);
+    gl.uniform1f(this.nebulaProgram.uniform("uAspect"), this.aspect);
+    gl.uniform2f(this.nebulaProgram.uniform("uCameraOffset"), offset[0], offset[1]);
+    gl.uniform1i(this.nebulaProgram.uniform("uNebulaCount"), nebula.count);
+    gl.uniform2fv(this.nebulaProgram.uniform("uCenters"), nebula.centers);
+    gl.uniform2fv(this.nebulaProgram.uniform("uScales"), nebula.scales);
+    gl.uniform1fv(this.nebulaProgram.uniform("uRotations"), nebula.rotations);
+    gl.uniform1fv(this.nebulaProgram.uniform("uThresholds"), nebula.thresholds);
+    gl.uniform1fv(this.nebulaProgram.uniform("uSoftness"), nebula.softness);
+    gl.uniform1fv(this.nebulaProgram.uniform("uWarpStrength"), nebula.warpStrength);
+    gl.uniform1fv(this.nebulaProgram.uniform("uBrightness"), nebula.brightness);
+    gl.uniform1fv(this.nebulaProgram.uniform("uOpacity"), nebula.opacity);
+    gl.uniform1fv(this.nebulaProgram.uniform("uSpeeds"), nebula.speeds);
+    gl.uniform2fv(this.nebulaProgram.uniform("uSeedOffsets"), nebula.seedOffsets);
+    gl.uniform3fv(this.nebulaProgram.uniform("uColorA"), nebula.colorA);
+    gl.uniform3fv(this.nebulaProgram.uniform("uColorB"), nebula.colorB);
+    gl.uniform3fv(this.nebulaProgram.uniform("uColorC"), nebula.colorC);
+    gl.bindVertexArray(this.quadVao);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    this.drawCalls += 1;
+  }
+
+  renderPlanet(planet, time, camera) {
+    if (!planet.visible) {
+      return;
+    }
+
+    const gl = this.gl;
+    const offset = camera.getOffset(this._cameraOffset);
+    this._planetCenter[0] = planet.centerNdc[0] * this.aspect;
+    this._planetCenter[1] = planet.centerNdc[1];
+    this.terranProgram.use();
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.uniform1f(this.terranProgram.uniform("uTime"), time.elapsed);
+    gl.uniform1f(this.terranProgram.uniform("uAspect"), this.aspect);
+    gl.uniform1f(this.terranProgram.uniform("uInternalHeight"), this.internalHeight);
+    gl.uniform1f(this.terranProgram.uniform("uPixelScale"), planet.pixelScale);
+    gl.uniform1f(this.terranProgram.uniform("uRadius"), planet.radius);
+    gl.uniform1f(this.terranProgram.uniform("uSeed"), planet.seed01);
+    gl.uniform1f(this.terranProgram.uniform("uTerrainScale"), planet.terrainScale);
+    gl.uniform1f(this.terranProgram.uniform("uCloudScale"), planet.cloudScale);
+    gl.uniform1f(this.terranProgram.uniform("uSeaLevel"), planet.seaLevel);
+    gl.uniform1f(this.terranProgram.uniform("uRotationSpeed"), planet.rotationSpeed);
+    gl.uniform1f(this.terranProgram.uniform("uCloudSpeed"), planet.cloudSpeed);
+    gl.uniform1f(this.terranProgram.uniform("uCloudCoverage"), planet.cloudCoverage);
+    gl.uniform1f(this.terranProgram.uniform("uAtmosphereStrength"), planet.atmosphereStrength);
+    gl.uniform1f(this.terranProgram.uniform("uDepth"), planet.depth);
+    gl.uniform1f(this.terranProgram.uniform("uOctaves"), planet.octaves);
+    gl.uniform2fv(this.terranProgram.uniform("uCenter"), this._planetCenter);
+    gl.uniform2f(this.terranProgram.uniform("uCameraOffset"), offset[0], offset[1]);
+    gl.uniform2fv(this.terranProgram.uniform("uLightOrigin"), planet.lightOrigin);
+    gl.uniform3fv(this.terranProgram.uniform("uOceanDark"), planet.palette.oceanDark);
+    gl.uniform3fv(this.terranProgram.uniform("uOceanLight"), planet.palette.oceanLight);
+    gl.uniform3fv(this.terranProgram.uniform("uLandDark"), planet.palette.landDark);
+    gl.uniform3fv(this.terranProgram.uniform("uLandBase"), planet.palette.landBase);
+    gl.uniform3fv(this.terranProgram.uniform("uLandLight"), planet.palette.landLight);
+    gl.uniform3fv(this.terranProgram.uniform("uCloudShadow"), planet.palette.cloudShadow);
+    gl.uniform3fv(this.terranProgram.uniform("uCloudLight"), planet.palette.cloudLight);
+    gl.uniform3fv(this.terranProgram.uniform("uAtmosphere"), planet.palette.atmosphere);
+    gl.bindVertexArray(this.quadVao);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     this.drawCalls += 1;
   }
 
