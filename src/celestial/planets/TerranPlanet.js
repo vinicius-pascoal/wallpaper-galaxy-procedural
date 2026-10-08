@@ -16,8 +16,15 @@ export class TerranPlanet extends Planet {
     this.terrainScale = random.range(4.4, 6.2);
     this.cloudScale = random.range(6.0, 8.0);
     this.seaLevel = random.range(0.45, 0.55);
-    this.rotationSpeed = random.range(0.009, 0.017) * (random.chance(0.5) ? -1 : 1);
-    this.cloudSpeed = random.range(0.014, 0.024) * (random.chance(0.5) ? -1 : 1);
+    this.initialRotation = random.range(0, Math.PI * 2);
+    this.rotationDirection = random.chance(0.5) ? -1 : 1;
+    this.rotationSpeed = random.range(0.009, 0.017) * this.rotationDirection;
+    this.cloudInitialRotation = random.range(0, Math.PI * 2);
+    this.cloudRotationSpeed = random.range(0.014, 0.024) * (random.chance(0.5) ? -1 : 1);
+    this.cloudSpeed = this.cloudRotationSpeed;
+    this.terrainSeed01 = (hashSeed(this.seed, "terrain") >>> 0) / 4294967296;
+    this.cloudSeed01 = (hashSeed(this.seed, "clouds") >>> 0) / 4294967296;
+    this.oceanSeed01 = (hashSeed(this.seed, "ocean") >>> 0) / 4294967296;
     this.cloudCoverage = random.range(0.56, 0.68);
     this.atmosphereStrength = random.range(0.26, 0.44);
     this.pixelScale = random.range(1.0, 1.8);

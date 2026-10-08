@@ -19,8 +19,8 @@ export class Engine {
     this.camera = new Camera();
     this.performance = new PerformanceManager();
     this.mouse = new MouseParallax(canvas);
-    this.renderer = new Renderer(canvas, options.quality);
-    this.scene = new Scene(options.seed, options.quality, options.view, options.showOrbits);
+    this.renderer = new Renderer(canvas, options.quality, options);
+    this.scene = new Scene(options.seed, options.quality, options.view, options.showOrbits, options);
     this.running = false;
     this._boundFrame = this._frame.bind(this);
     this._boundResize = this._resize.bind(this);
@@ -84,6 +84,7 @@ export class Engine {
       `FPS              ${this.time.fps.toFixed(1)}`,
       `Frame time       ${this.performance.frameTime.toFixed(2)} ms`,
       `Internal         ${renderer.internalWidth}×${renderer.internalHeight}`,
+      `Shader time      ${this.time.shaderElapsed.toFixed(2)}`,
       `Stars            ${stats.starCount}`,
       `Galaxy stars     ${stats.galaxyCount}`,
       `Nebulae          ${stats.nebulaCount}`,
@@ -94,11 +95,14 @@ export class Engine {
       `Terran seed      ${stats.terranSeed}`,
       `Terran radius    ${stats.terranRadius.toFixed(3)}`,
       `FBM octaves      ${stats.fbmOctaves}`,
+      `Terran spin      ${stats.terranRotationSpeed.toFixed(4)}`,
+      `Cloud spin       ${stats.terranCloudRotationSpeed.toFixed(4)}`,
       `Draw calls       ${renderer.drawCalls}`,
       `Star draws       ${renderer.starDrawCalls}`,
       `Planet draws     ${renderer.planetDrawCalls}`,
       `Quality          ${this.options.quality.name}`,
       `Seed             ${this.options.seed >>> 0}`,
+      ...(this.options.planetGallery ? [`Gallery          ${this.scene.planetLayer}`, `Reference pal.   ${this.options.referencePalette ? "on" : "off"}`, `Reference params. ${this.options.referenceParameters ? "on" : "off"}`] : []),
     ].join("\n");
     this.options.debugElement.hidden = false;
   }

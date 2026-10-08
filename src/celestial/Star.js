@@ -28,7 +28,11 @@ export class Star extends CelestialBody {
         : type === StarType.YELLOW ? random.range(5000, 6800)
           : type === StarType.WHITE ? random.range(6800, 10000)
             : random.range(10000, 18000);
+    this.initialRotation = random.range(0, Math.PI * 2);
     this.rotationSpeed = random.range(0.006, 0.014) * (random.chance(0.5) ? -1 : 1);
+    this.surfaceSpeed = this.rotationSpeed;
+    this.blobSpeed = random.range(0.012, 0.024) * (random.chance(0.5) ? -1 : 1);
+    this.flareSpeed = random.range(0.018, 0.035) * (random.chance(0.5) ? -1 : 1);
     this.flareStrength = random.range(0.18, 0.5);
     this.activity = random.range(0.3, 0.86);
     this.luminosity = random.range(0.72, 1.0);

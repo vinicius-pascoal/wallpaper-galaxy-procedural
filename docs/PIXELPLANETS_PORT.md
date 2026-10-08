@@ -46,7 +46,7 @@ Novo: `shaders/planets/gas.frag`.
 
 Alterações: bandas verticais recebem ruído/FBM, rotação independente, iluminação e dithering. Anéis são opcionais por seed e a máscara separa trecho traseiro e frontal no mesmo shader.
 
-Status: primeira versão funcional.
+Status: portado em multipass.
 
 ## Lava World
 
@@ -56,7 +56,7 @@ Novo: `shaders/planets/lava.frag`.
 
 Alterações: crosta, fissuras e regiões emissivas usam campos de ruído separados; a lava mantém brilho no lado escuro sem bloom externo.
 
-Status: primeira versão funcional.
+Status: portado em multipass.
 
 ## Ice World
 
@@ -66,7 +66,32 @@ Novo: `shaders/planets/ice.frag`.
 
 Alterações: superfície fria, cobertura de gelo e fissuras usam FBM/threshold com paleta azul-ciano derivada da seed.
 
-Status: primeira versão funcional.
+Status: portado em multipass.
+
+## Animação e composição das camadas
+
+As camadas de estrela e planetas são animadas em coordenadas esféricas 3D com `rotateSphereY()`. A superfície, nuvens, turbulência, fissuras e flares possuem velocidades separadas e determinísticas. A normal geométrica não é rotacionada para a iluminação, preservando diffuse, terminator e rim lighting estáveis enquanto o material se move. No Terran, a composição é oceano → terra → nuvens, com lighting/dithering em cada shader; no Gas Giant, bandas e turbulência usam rotação diferencial; no Lava, a fissura tem fluxo próprio. A abordagem 3D também elimina a costura de longitude que ocorria com deslocamento direto de UV.
+
+## Matriz de layers portadas
+
+| BODY | ORIGINAL LAYER | ORIGINAL SHADER | WEBGL SHADER | STATUS |
+| --- | --- | --- | --- | --- |
+| Terran | Water | `LandMasses/PlanetUnder.gdshader` | `planets/terran/water.frag` | PORTED |
+| Terran | Land | `LandMasses/PlanetLandmass.gdshader` | `planets/terran/land.frag` | PORTED |
+| Terran | Cloud | `LandMasses/Clouds.gdshader` | `planets/terran/clouds.frag` | PORTED |
+| Gas | GasLayers | `GasPlanetLayers/GasLayers.gdshader` | `planets/gas/layers.frag` | PORTED |
+| Gas | Ring | `GasPlanetLayers/Ring.gdshader` | `planets/gas/ring.frag` | PORTED |
+| Lava | Land | `NoAtmosphere/NoAtmosphere.gdshader` | `planets/lava/land.frag` | PORTED |
+| Lava | Craters | `NoAtmosphere/Craters.gdshader` | `planets/lava/craters.frag` | PORTED |
+| Lava | LavaRivers | `LavaWorld/Rivers.gdshader` | `planets/lava/rivers.frag` | PORTED |
+| Ice | Land | `LandMasses/PlanetUnder.gdshader` | `planets/ice/land.frag` | PORTED |
+| Ice | Lakes | inline shader in `IceWorld.tscn` | `planets/ice/lakes.frag` | PORTED |
+| Ice | Clouds | `LandMasses/Clouds.gdshader` | `planets/ice/clouds.frag` | PORTED |
+| Star | Blobs | `Star/StarBlobs.gdshader` | `star/blobs.frag` | PORTED |
+| Star | Surface | `Star/Star.gdshader` | `star/surface.frag` | PORTED |
+| Star | Flares | `Star/StarFlares.gdshader` | `star/flares.frag` | PORTED |
+
+Os ports preservam os campos específicos de cada shader: wrapping por tamanho, `spherify`, `circleNoise`, FBM com octaves por layer, thresholds, light borders, alpha masks e dithering. O arquivo comum `shaders/common/pixelplanets.glsl` apenas centraliza implementações equivalentes de suporte; a composição e os uniforms permanecem separados por layer.
 
 ## Licença
 

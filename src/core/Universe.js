@@ -51,6 +51,8 @@ export class Universe {
       planetCount: this.systems.reduce((total, system) => total + system.planets.length, 0),
       terranSeed: this.terran?.seed ?? 0,
       terranRadius: this.terran?.radius ?? 0,
+      terranRotationSpeed: this.terran?.rotationSpeed ?? 0,
+      terranCloudRotationSpeed: this.terran?.cloudRotationSpeed ?? 0,
       fbmOctaves: this.terran?.octaves ?? 0,
       lodCounts: this.lod.counts,
       culledBodies: this.lod.culled,

@@ -4,6 +4,7 @@ precision highp float;
 #include "../common/noise.glsl"
 #include "../common/fbm.glsl"
 #include "../common/pixel.glsl"
+#include "../common/rotate.glsl"
 #include "../common/sphere.glsl"
 #include "../common/dithering.glsl"
 #include "../common/palette.glsl"
@@ -19,6 +20,8 @@ uniform float uPixelScale;
 uniform float uRadius;
 uniform float uSeed;
 uniform float uRotationSpeed;
+uniform float uInitialRotation;
+uniform float uLavaFlowSpeed;
 uniform float uCrackScale;
 uniform float uLavaThreshold;
 uniform float uDepth;
@@ -42,10 +45,10 @@ void main() {
 
     float sphereMask;
     vec3 normal = sphereNormal(pixelLocal, sphereMask);
-    vec2 uv = sphereUv(normal);
-    uv.x = fract(uv.x + uTime * uRotationSpeed * 0.08 + uSeed * 0.29);
-    float crust = fbm(uv * uCrackScale + uSeed * 11.0, int(uLod <= 1 ? 2 : uLod == 2 ? 3 : 4));
-    float cracks = fbm(uv * (uCrackScale * 1.9) - uSeed * 4.0, 2);
+    vec3 surfacePoint = rotateSphereY(normal, uInitialRotation + uTime * uRotationSpeed);
+    vec3 flowPoint = rotateSphereY(normal, uInitialRotation + uTime * (uRotationSpeed + uLavaFlowSpeed));
+    float crust = fbm3(surfacePoint * uCrackScale + vec3(uSeed * 11.0, -uSeed * 3.0, uSeed * 5.0), int(uLod <= 1 ? 2 : uLod == 2 ? 3 : 4));
+    float cracks = fbm3(flowPoint * (uCrackScale * 1.9) + vec3(-uSeed * 4.0, uTime * uLavaFlowSpeed * 0.35, uSeed * 2.0), 2);
     float lavaMask = smoothstep(uLavaThreshold - 0.08, uLavaThreshold + 0.04, cracks + crust * 0.34);
     float light = sphereLighting(normal, vec3(uLightDirection, 0.82), 0.12);
     float shade = ditheredBand(light, 4.0, gl_FragCoord.xy);

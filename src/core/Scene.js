@@ -1,11 +1,22 @@
 import { Universe } from "./Universe.js";
+import { PlanetGallery } from "./PlanetGallery.js";
+
+const GALLERY_CAMERA = Object.freeze({
+  getOffset(target) {
+    target[0] = 0;
+    target[1] = 0;
+    return target;
+  },
+});
 
 export class Scene {
-  constructor(seed, quality, view = "all", showOrbits = false) {
+  constructor(seed, quality, view = "all", showOrbits = false, options = {}) {
     this.view = view;
     this.showNebulae = true;
     this.showPlanet = true;
     this.showOrbits = showOrbits;
+    this.planetGallery = options.planetGallery ? new PlanetGallery(seed) : null;
+    this.planetLayer = options.planetLayer ?? "composite";
     this.universe = new Universe(seed, quality);
   }
 
@@ -15,9 +26,17 @@ export class Scene {
 
   update(time) {
     this.universe.update(time);
+    this.planetGallery?.update(time.elapsed);
   }
 
   render(renderer, camera, time) {
+    if (this.planetGallery) {
+      for (const body of this.planetGallery.bodies) {
+        const light = body.kind === "planet" ? this.planetGallery.light : null;
+        renderer.renderBody(body, light, 3, time, GALLERY_CAMERA, this.planetLayer);
+      }
+      return;
+    }
     const showStars = this.view !== "galaxy";
     const showGalaxy = this.view !== "stars";
     const isolatedView = this.view === "stars" || this.view === "galaxy";
@@ -66,7 +85,7 @@ export class Scene {
     }
     const level = this.universe.lod.classify(body.radius, renderer.internalHeight, body.kind === "planet");
     this.universe.lod.record(level);
-    renderer.renderBody(body, star, level, time, camera);
+    renderer.renderBody(body, star, level, time, camera, "composite");
   }
 
   toggleNebulae() {

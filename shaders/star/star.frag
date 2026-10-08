@@ -4,6 +4,7 @@ precision highp float;
 #include "../common/noise.glsl"
 #include "../common/fbm.glsl"
 #include "../common/pixel.glsl"
+#include "../common/rotate.glsl"
 #include "../common/sphere.glsl"
 #include "../common/dithering.glsl"
 #include "../common/palette.glsl"
@@ -19,6 +20,10 @@ uniform float uPixelScale;
 uniform float uRadius;
 uniform float uSeed;
 uniform float uRotationSpeed;
+uniform float uInitialRotation;
+uniform float uSurfaceSpeed;
+uniform float uBlobSpeed;
+uniform float uFlareSpeed;
 uniform float uFlareStrength;
 uniform float uActivity;
 uniform float uDepth;
@@ -39,7 +44,7 @@ void main() {
     float distanceToCenter = length(pixelLocal);
     float haloWidth = localPixel * 4.0;
     float angle = atan(pixelLocal.y, pixelLocal.x);
-    float flareRay = pow(max(0.0, cos(angle * 4.0 + uSeed * 18.0 + uTime * 0.06)), 18.0);
+    float flareRay = pow(max(0.0, cos(angle * 4.0 + uSeed * 18.0 + uTime * uFlareSpeed)), 18.0);
     float flare = flareRay * uFlareStrength * (1.0 - smoothstep(1.0, 1.0 + haloWidth, distanceToCenter));
 
     if (distanceToCenter > 1.0 + haloWidth) {
@@ -55,10 +60,10 @@ void main() {
 
     float sphereMask;
     vec3 normal = sphereNormal(pixelLocal, sphereMask);
-    vec2 uv = sphereUv(normal);
-    uv.x = fract(uv.x + uTime * uRotationSpeed * 0.08 + uSeed * 0.31);
-    float blobs = uLod <= 1 ? noise2d(uv * 5.0 + uSeed * 10.0) : fbm(uv * 7.5 + uSeed * 10.0, 4);
-    float granulation = uLod <= 1 ? 0.0 : fbm(uv * 18.0 - uSeed * 4.0, 2);
+    vec3 surfacePoint = rotateSphereY(normal, uInitialRotation + uTime * uSurfaceSpeed);
+    vec3 blobPoint = rotateSphereY(normal, uInitialRotation * 0.7 + uTime * uBlobSpeed);
+    float blobs = uLod <= 1 ? noise3d(surfacePoint * 5.0 + vec3(uSeed * 10.0)) : fbm3(surfacePoint * 7.5 + vec3(uSeed * 10.0, -uSeed * 3.0, uSeed * 6.0), 4);
+    float granulation = uLod <= 1 ? 0.0 : fbm3(blobPoint * 18.0 + vec3(-uSeed * 4.0, uSeed * 2.0, -uSeed * 7.0), 2);
     float surfaceValue = clamp(blobs * 1.25 + granulation * 0.22 + uActivity * 0.1, 0.0, 1.0);
     float bands = ditheredBand(surfaceValue, 4.0, gl_FragCoord.xy);
     vec3 surface = paletteRamp(uColorDark, uColorBase, uColorLight, bands);

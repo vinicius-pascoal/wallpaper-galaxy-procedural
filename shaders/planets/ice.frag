@@ -4,6 +4,7 @@ precision highp float;
 #include "../common/noise.glsl"
 #include "../common/fbm.glsl"
 #include "../common/pixel.glsl"
+#include "../common/rotate.glsl"
 #include "../common/sphere.glsl"
 #include "../common/dithering.glsl"
 #include "../common/palette.glsl"
@@ -19,6 +20,7 @@ uniform float uPixelScale;
 uniform float uRadius;
 uniform float uSeed;
 uniform float uRotationSpeed;
+uniform float uInitialRotation;
 uniform float uCrackScale;
 uniform float uIceCoverage;
 uniform float uDepth;
@@ -42,10 +44,9 @@ void main() {
 
     float sphereMask;
     vec3 normal = sphereNormal(pixelLocal, sphereMask);
-    vec2 uv = sphereUv(normal);
-    uv.x = fract(uv.x + uTime * uRotationSpeed * 0.08 + uSeed * 0.21);
-    float terrain = fbm(uv * uCrackScale + uSeed * 8.0, int(uLod <= 1 ? 2 : uLod == 2 ? 3 : 4));
-    float fissures = fbm(uv * uCrackScale * 2.2 - uSeed * 6.0, 2);
+    vec3 surfacePoint = rotateSphereY(normal, uInitialRotation + uTime * uRotationSpeed);
+    float terrain = fbm3(surfacePoint * uCrackScale + vec3(uSeed * 8.0, -uSeed * 2.0, uSeed * 5.0), int(uLod <= 1 ? 2 : uLod == 2 ? 3 : 4));
+    float fissures = fbm3(surfacePoint * uCrackScale * 2.2 + vec3(-uSeed * 6.0, uTime * uRotationSpeed * 0.15, uSeed * 3.0), 2);
     float iceMask = smoothstep(uIceCoverage - 0.1, uIceCoverage + 0.14, terrain);
     float crackMask = smoothstep(0.54, 0.67, fissures) * (1.0 - iceMask * 0.45);
     float light = sphereLighting(normal, vec3(uLightDirection, 0.82), 0.2);

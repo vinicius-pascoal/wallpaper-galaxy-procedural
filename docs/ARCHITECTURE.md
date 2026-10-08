@@ -24,6 +24,8 @@ Universe
 5. Cada corpo usa ponto simples, shader intermediário ou shader completo conforme LOD.
 6. Quad fullscreen faz upscale com textura `NEAREST`.
 
+Em LOD 1/2/3, os corpos usam um pass por layer, sem limpar o framebuffer entre passes; LOD 0 continua sendo o ponto simples. A ordem é Terran `Water → Land → Cloud`, Gas `GasLayers → Ring`, Lava `Land → Craters → LavaRivers`, Ice `Land → Lakes → Clouds` e Star `Blobs → Star → StarFlares`. O scissor usa a extensão da composição: 3× para anéis de Gas e 2× para Blobs/Flares de Star.
+
 Os passes de corpos usam scissor culling baseado no raio em screen space, evitando rasterizar a tela inteira para objetos pequenos.
 
 ## Seeds
@@ -55,6 +57,18 @@ O sinal de `sin(angle)` fornece o depth sorting simplificado: planetas atrás s�
 ## PlanetFactory
 
 `PlanetFactory` seleciona entre `TERRAN`, `GAS`, `LAVA` e `ICE`, criando dados determinísticos e paletas específicas. Os shaders compartilham `uTime`, `uSeed`, `uCenter`, `uRadius`, `uLightDirection`, `uLod` e a grade interna quando esses uniforms são relevantes.
+
+## Animação das superfícies
+
+Movimento orbital e rotação axial são estados distintos. O `OrbitSystem` altera a posição do corpo; os shaders recebem `uInitialRotation` e velocidades axiais determinísticas para animar o material na esfera. As coordenadas procedurais usam `rotateSphereY()` sobre a normal esférica 3D, em vez de deslocar uma UV 2D. Isso evita costura visível na longitude e deixa o campo acompanhar a curvatura.
+
+Cada camada pode ter seu próprio relógio: no Terran, terreno/oceano e nuvens usam rotações e seeds separadas; no Gas Giant, bandas e turbulência usam velocidades diferenciais; no Lava, crosta e fissuras possuem fluxo próprio; na estrela, superfície, granulação e flares são independentes. A `normal` original continua sendo usada para diffuse, terminator e rim lighting, portanto a direção da luz não gira junto com o material.
+
+`Time.shaderElapsed` limita o tempo enviado aos shaders a uma janela cíclica longa, evitando perda de precisão de ponto flutuante em wallpapers que ficam abertos por muitos dias. A simulação continua usando `elapsed` completo para órbitas e estatísticas.
+
+## Galeria de debug
+
+`?planetGallery=true` substitui a composição normal por cinco corpos grandes, em LOD 3: Terran, Gas, Lava, Ice e Star. `planetLayer=composite` mostra a composição; `planetLayer=0`, `1` e `2` mostram o índice correspondente de cada corpo, e também são aceitos nomes como `water`, `land`, `clouds`, `ring`, `craters`, `lakes`, `blobs`, `surface` e `flares`. A galeria usa por padrão os parâmetros e paletas da referência; `referencePalette=false` e `referenceParams=false` reativam os valores procedurais. `animationDebugSpeed=10` acelera apenas o tempo dos layers.
 
 ## LOD
 

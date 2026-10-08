@@ -19,13 +19,21 @@ export class PlanetFactory {
     planet.radius = radius;
     planet.orbit = orbit;
     planet.depth = depth;
-    planet.rotation = random.range(0, Math.PI * 2);
+    planet.initialRotation = planet.initialRotation || random.range(0, Math.PI * 2);
+    planet.rotation = planet.initialRotation;
     planet.rotationSpeed = random.range(0.006, 0.016) * (random.chance(0.5) ? -1 : 1);
+    planet.rotationDirection = planet.rotationSpeed < 0 ? -1 : 1;
     planet.seed01 = (planet.seed >>> 0) / 4294967296;
     if (type === PlanetType.TERRAN) {
       planet.terrainScale = planet.terrainScale ?? random.range(4.4, 6.2);
       planet.cloudScale = planet.cloudScale ?? random.range(6.0, 8.0);
       planet.lightOrigin = planet.lightOrigin ?? new Float32Array([-0.45, 0.5]);
+      planet.cloudInitialRotation = planet.cloudInitialRotation ?? random.range(0, Math.PI * 2);
+      planet.cloudRotationSpeed = planet.cloudRotationSpeed ?? random.range(0.014, 0.024);
+      planet.cloudSpeed = planet.cloudRotationSpeed;
+      planet.terrainSeed01 = planet.terrainSeed01 ?? planet.seed01;
+      planet.cloudSeed01 = planet.cloudSeed01 ?? ((hashSeed(seed, "clouds") >>> 0) / 4294967296);
+      planet.oceanSeed01 = planet.oceanSeed01 ?? ((hashSeed(seed, "ocean") >>> 0) / 4294967296);
     } else if (type === PlanetType.GAS) {
       planet.palette = PaletteGenerator.gas(seed);
       planet.bandFrequency = random.range(4.0, 8.0);
@@ -33,11 +41,14 @@ export class PlanetFactory {
       planet.hasRings = random.chance(0.42);
       planet.ringTilt = random.range(0.24, 0.58);
       planet.ringWidth = random.range(0.08, 0.16);
+      planet.bandSpeed = planet.rotationSpeed * random.range(0.92, 1.08);
+      planet.turbulenceSpeed = planet.rotationSpeed * random.range(1.1, 1.35);
       planet.octaves = 4;
     } else if (type === PlanetType.LAVA) {
       planet.palette = PaletteGenerator.lava(seed);
       planet.lavaThreshold = random.range(0.56, 0.68);
       planet.crackScale = random.range(5.0, 8.0);
+      planet.lavaFlowSpeed = random.range(0.004, 0.009) * (random.chance(0.5) ? -1 : 1);
       planet.octaves = 4;
     } else if (type === PlanetType.ICE) {
       planet.palette = PaletteGenerator.ice(seed);
