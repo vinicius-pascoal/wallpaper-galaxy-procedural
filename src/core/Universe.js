@@ -12,7 +12,7 @@ export class Universe {
     this.galaxy = new Galaxy(hashSeed(this.seed, "galaxy"), quality.galaxyCount);
     this.starField = new StarField(hashSeed(this.seed, "background-stars"), quality.starCount);
     this.nebula = new Nebula(hashSeed(this.seed, "nebulae"), quality.nebulaCount);
-    this.lod = new LODManager(quality.maxFullDetailPlanets);
+    this.lod = new LODManager(quality.maxFullDetailPlanets, quality.maxFullDetailBodies);
     this.systems = SystemGenerator.createSystems(hashSeed(this.seed, "solar-systems"), quality.systemCount, {
       forceHero: true,
       positions: [
@@ -33,6 +33,11 @@ export class Universe {
     this.galaxyLayer = renderer.createPointLayer(this.galaxy.data);
     for (let index = 0; index < this.systems.length; index += 1) {
       this.systems[index].orbitLayer = renderer.createLineLayer(this.systems[index].orbits.lineData);
+      const belt = this.systems[index].asteroidBelt;
+      if (belt) {
+        belt.backLayer = renderer.createAsteroidLayer(belt.backData);
+        belt.frontLayer = renderer.createAsteroidLayer(belt.frontData);
+      }
     }
   }
 
@@ -49,6 +54,9 @@ export class Universe {
       nebulaCount: this.nebula.count,
       systemCount: this.systems.length,
       planetCount: this.systems.reduce((total, system) => total + system.planets.length, 0),
+      moonCount: this.systems.reduce((total, system) => total + system.moons.length, 0),
+      asteroidBeltCount: this.systems.reduce((total, system) => total + (system.asteroidBelt ? 1 : 0), 0),
+      asteroidCount: this.systems.reduce((total, system) => total + (system.asteroidBelt?.count ?? 0), 0),
       terranSeed: this.terran?.seed ?? 0,
       terranRadius: this.terran?.radius ?? 0,
       terranRotationSpeed: this.terran?.rotationSpeed ?? 0,

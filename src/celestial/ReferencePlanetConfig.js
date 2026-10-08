@@ -4,6 +4,25 @@ export const REFERENCE_PLANET_CONFIG = Object.freeze({
     land: Object.freeze({ pixels: 100, timeSpeed: 0.2, updateFactor: 0.02, lightBorder1: 0.32, lightBorder2: 0.534, landCutoff: 0.633, size: 4.292, octaves: 6, seed: 7.947, rotation: 0.2 }),
     clouds: Object.freeze({ pixels: 100, timeSpeed: 0.47, updateFactor: 0.01, cloudCover: 0.415, stretch: 2.0, cloudCurve: 1.3, lightBorder1: 0.52, lightBorder2: 0.62, size: 7.745, octaves: 2, seed: 5.939 }),
   }),
+  dryTerran: Object.freeze({
+    land: Object.freeze({ pixels: 100, timeSpeed: 0.1, updateFactor: 0.02, lightDistance1: 0.362, lightDistance2: 0.525, size: 8, octaves: 3, seed: 1.175 }),
+  }),
+  islands: Object.freeze({
+    water: Object.freeze({ pixels: 100, timeSpeed: 0.1, updateFactor: 0.02, lightBorder1: 0.4, lightBorder2: 0.6, size: 5.228, octaves: 3, seed: 10 }),
+    land: Object.freeze({ pixels: 100, timeSpeed: 0.2, updateFactor: 0.02, lightBorder1: 0.32, lightBorder2: 0.534, landCutoff: 0.78, size: 4.292, octaves: 6, seed: 7.947, rotation: 0.2 }),
+    clouds: Object.freeze({ pixels: 100, timeSpeed: 0.47, updateFactor: 0.01, cloudCover: 0.32, stretch: 2.0, cloudCurve: 1.3, lightBorder1: 0.52, lightBorder2: 0.62, size: 7.745, octaves: 2, seed: 5.939 }),
+  }),
+  noAtmosphere: Object.freeze({
+    land: Object.freeze({ pixels: 100, timeSpeed: 0.2, updateFactor: 0.02, lightBorder1: 0.4, lightBorder2: 0.6, size: 10, octaves: 3, seed: 1.551 }),
+    craters: Object.freeze({ pixels: 100, timeSpeed: 0.2, updateFactor: 0.02, lightBorder: 0.4, size: 3.5, seed: 1.561 }),
+  }),
+  rocky: Object.freeze({
+    land: Object.freeze({ pixels: 100, timeSpeed: 0.2, updateFactor: 0.02, lightBorder1: 0.4, lightBorder2: 0.6, size: 8.5, octaves: 3, seed: 2.451 }),
+    craters: Object.freeze({ pixels: 100, timeSpeed: 0.2, updateFactor: 0.02, lightBorder: 0.4, size: 4.2, seed: 2.461 }),
+  }),
+  asteroid: Object.freeze({
+    surface: Object.freeze({ pixels: 100, timeSpeed: 0.4, updateFactor: 0.02, size: 5.294, octaves: 2, seed: 1.567 }),
+  }),
   gas: Object.freeze({
     layers: Object.freeze({ pixels: 100, timeSpeed: 0.05, updateFactor: 0.004, cloudCover: 0.61, stretch: 2.204, cloudCurve: 1.376, lightBorder1: 0.52, lightBorder2: 0.62, bands: 0.892, size: 10.107, octaves: 3, seed: 6.314 }),
     ring: Object.freeze({ pixels: 300, timeSpeed: 0.2, updateFactor: 0.00837758, ringWidth: 0.127, ringPerspective: 6.0, scaleRelative: 6.0, lightBorder1: 0.52, lightBorder2: 0.62, size: 15, octaves: 4, seed: 8.461, rotationOffset: 0.7, rotation: 0.7 }),
@@ -30,6 +49,25 @@ export const REFERENCE_PALETTES = Object.freeze({
     water: [[0.572549, 0.909804, 0.752941], [0.309804, 0.643137, 0.721569], [0.172549, 0.207843, 0.301961]],
     land: [[0.784314, 0.831373, 0.364706], [0.388235, 0.670588, 0.247059], [0.184314, 0.341176, 0.32549], [0.156863, 0.207843, 0.25098]],
     clouds: [[0.87451, 0.878431, 0.909804], [0.639216, 0.654902, 0.760784], [0.407843, 0.435294, 0.6], [0.25098, 0.286275, 0.45098]],
+  }),
+  dryTerran: Object.freeze({
+    land: [[1, 0.537255, 0.2], [0.901961, 0.270588, 0.223529], [0.678431, 0.184314, 0.270588], [0.321569, 0.2, 0.247059], [0.239216, 0.160784, 0.211765]],
+  }),
+  islands: Object.freeze({
+    water: [[0.294118, 0.811765, 0.862745], [0.145098, 0.490196, 0.65098], [0.086275, 0.184314, 0.329412]],
+    land: [[0.784314, 0.831373, 0.364706], [0.388235, 0.670588, 0.247059], [0.184314, 0.341176, 0.32549], [0.156863, 0.207843, 0.25098]],
+    clouds: [[0.87451, 0.878431, 0.909804], [0.639216, 0.654902, 0.760784], [0.407843, 0.435294, 0.6], [0.25098, 0.286275, 0.45098]],
+  }),
+  noAtmosphere: Object.freeze({
+    land: [[0.560784, 0.301961, 0.341176], [0.321569, 0.2, 0.247059], [0.239216, 0.160784, 0.211765]],
+    craters: [[0.321569, 0.2, 0.247059], [0.239216, 0.160784, 0.211765]],
+  }),
+  rocky: Object.freeze({
+    land: [[0.62, 0.58, 0.6], [0.38, 0.36, 0.4], [0.22, 0.22, 0.27]],
+    craters: [[0.34, 0.32, 0.36], [0.18, 0.18, 0.22]],
+  }),
+  asteroid: Object.freeze({
+    surface: [[0.639216, 0.654902, 0.760784], [0.298039, 0.407843, 0.521569], [0.227451, 0.247059, 0.368627]],
   }),
   gas: Object.freeze({
     layers: [[0.933333, 0.764706, 0.603922], [0.85098, 0.627451, 0.4], [0.560784, 0.337255, 0.231373]],

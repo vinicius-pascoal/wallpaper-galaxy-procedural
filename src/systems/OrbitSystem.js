@@ -1,8 +1,16 @@
 export class OrbitSystem {
-  constructor(star, planets, systemPosition) {
+  constructor(star, planets, systemPosition, moons = []) {
     this.star = star;
     this.planets = planets;
+    this.moons = moons;
     this.lineData = this._buildLineData(systemPosition);
+    this.renderBodies = [];
+  }
+
+  setMoons(moons) {
+    this.moons = moons;
+    this.renderBodies.length = 0;
+    this.renderBodies.push(...this.planets, ...this.moons);
   }
 
   _buildLineData(systemPosition) {
@@ -38,6 +46,24 @@ export class OrbitSystem {
       planet.orbitAngle = angle;
       planet.orbitDepth = Math.sin(angle);
       planet.renderDepth = planet.depth + planet.orbitDepth * 0.008;
+      planet.rotation = planet.initialRotation + elapsed * planet.rotationSpeed;
     }
+    for (let index = 0; index < this.moons.length; index += 1) {
+      const moon = this.moons[index];
+      const parent = moon.parent;
+      const orbit = moon.orbit;
+      const angle = orbit.initialAngle + elapsed * orbit.speed * orbit.direction;
+      const radiusX = orbit.semiMajorAxis;
+      const radiusY = radiusX * (1.0 - orbit.eccentricity);
+      moon.position[0] = parent.position[0] + Math.cos(angle) * radiusX;
+      moon.position[1] = parent.position[1] + Math.sin(angle) * radiusY * orbit.inclination;
+      moon.orbitAngle = angle;
+      moon.orbitDepth = parent.orbitDepth + Math.sin(angle) * 0.18;
+      moon.renderDepth = moon.depth + moon.orbitDepth * 0.008;
+      moon.rotation = moon.initialRotation + elapsed * moon.rotationSpeed;
+    }
+    this.renderBodies.length = 0;
+    this.renderBodies.push(...this.planets, ...this.moons);
+    this.renderBodies.sort((a, b) => a.renderDepth - b.renderDepth);
   }
 }

@@ -91,6 +91,20 @@ As camadas de estrela e planetas são animadas em coordenadas esféricas 3D com 
 | Star | Surface | `Star/Star.gdshader` | `star/surface.frag` | PORTED |
 | Star | Flares | `Star/StarFlares.gdshader` | `star/flares.frag` | PORTED |
 
+## Dry Terran, Islands e No Atmosphere
+
+Dry Terran usa `Planets/DryTerran/DryTerran.tscn` como referência: um único passe de terreno árido com spherify, FBM, posterização em cinco famílias e sem camada oceânica/nuvens. O port equivalente é `shaders/planets/dry-terran/land.frag`.
+
+Islands reutiliza os três shaders de LandMasses (`Water → Land → Clouds`), mas eleva o `land_cutoff` para manter o oceano dominante e usa paleta oceânica/terrestre própria. No Atmosphere/Rocky usa os shaders portados de `Planets/NoAtmosphere/`: superfície e crateras, sem clouds/halo. Rocky é a variante dessaturada usada por luas rochosas.
+
+## Asteroids
+
+Original: `Planets/Asteroids/Asteroid.tscn`, `Asteroid.gd` e `Asteroids.gdshader`.
+
+Novo: `src/celestial/Asteroid.js`, `src/systems/AsteroidBelt.js`, `shaders/asteroid/asteroid.frag`, `shaders/asteroid/belt.vert` e `shaders/asteroid/belt.frag`.
+
+A forma usa ruído para deformar a silhueta circular, variação de superfície, crateras, luz, rotação e dithering/pixelização. O cinturão pré-aloca TypedArrays e separa asteroides atrás/à frente do sistema; cada lado é enviado em lote por point sprites. Gaps, clusters, jitter, inclinação e densidade são derivados do seed.
+
 Os ports preservam os campos específicos de cada shader: wrapping por tamanho, `spherify`, `circleNoise`, FBM com octaves por layer, thresholds, light borders, alpha masks e dithering. O arquivo comum `shaders/common/pixelplanets.glsl` apenas centraliza implementações equivalentes de suporte; a composição e os uniforms permanecem separados por layer.
 
 ## Licença

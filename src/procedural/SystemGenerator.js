@@ -1,20 +1,26 @@
 import { hashSeed } from "./Hash.js";
 import { SeededRandom } from "./SeededRandom.js";
 import { PlanetFactory, PlanetType } from "../celestial/PlanetFactory.js";
+import { MoonGenerator } from "./MoonGenerator.js";
 import { Star } from "../celestial/Star.js";
 import { SolarSystem } from "../systems/SolarSystem.js";
+import { AsteroidBelt } from "../systems/AsteroidBelt.js";
 
 const ZONE = Object.freeze({ INNER: "inner", HABITABLE: "habitable", OUTER: "outer" });
 
 function choosePlanetType(random, zone) {
   const roll = random.next();
   if (zone === ZONE.INNER) {
-    return roll < 0.52 ? PlanetType.LAVA : roll < 0.75 ? PlanetType.TERRAN : PlanetType.GAS;
+    return roll < 0.42 ? PlanetType.LAVA : roll < 0.58 ? PlanetType.NO_ATMOSPHERE
+      : roll < 0.74 ? PlanetType.DRY_TERRAN : PlanetType.GAS;
   }
   if (zone === ZONE.OUTER) {
-    return roll < 0.48 ? PlanetType.GAS : roll < 0.84 ? PlanetType.ICE : PlanetType.TERRAN;
+    return roll < 0.42 ? PlanetType.GAS : roll < 0.7 ? PlanetType.ICE
+      : roll < 0.86 ? PlanetType.ISLANDS : PlanetType.DRY_TERRAN;
   }
-  return roll < 0.48 ? PlanetType.TERRAN : roll < 0.7 ? PlanetType.GAS : roll < 0.86 ? PlanetType.LAVA : PlanetType.ICE;
+  return roll < 0.34 ? PlanetType.TERRAN : roll < 0.5 ? PlanetType.ISLANDS
+    : roll < 0.66 ? PlanetType.DRY_TERRAN : roll < 0.8 ? PlanetType.GAS
+      : roll < 0.9 ? PlanetType.LAVA : PlanetType.ICE;
 }
 
 export class SystemGenerator {
@@ -56,7 +62,15 @@ export class SystemGenerator {
           : random.range(0.014, 0.032);
         planets[planetIndex] = PlanetFactory.create({ type, seed: planetSeed, radius, orbit, depth: depth + 0.01 });
       }
-      systems[index] = new SolarSystem(seed, position, star, planets, depth, layer);
+      const moons = planets.flatMap((planet) => MoonGenerator.createForPlanet(planet));
+      const belt = random.chance(random.range(0.25, 0.4))
+        ? new AsteroidBelt(hashSeed(seed, "asteroid-belt"), position, {
+          count: random.int(28, 52),
+          innerRadius: random.range(0.29, 0.39),
+          outerRadius: random.range(0.44, 0.58),
+        })
+        : null;
+      systems[index] = new SolarSystem(seed, position, star, planets, depth, layer, moons, belt);
     }
     return systems;
   }

@@ -32,7 +32,8 @@ Qualidades: `low`, `medium`, `high`, `ultra`.
 - Nebulosas procedurais com FBM/domain warping.
 - Estrelas procedurais com tipos RED, ORANGE, YELLOW, WHITE e BLUE.
 - Solar Systems determinísticos com estrela, planetas e órbitas.
-- Tipos Terran, Gas Giant, Lava World e Ice World.
+- Tipos Terran, Dry Terran, Islands, No Atmosphere/Rocky, Gas Giant, Lava World e Ice World.
+- Luas rochosas/gélidas determinísticas e cinturões de asteroides em lote, com profundidade frente/trás.
 - Iluminação planetária baseada na posição da estrela do sistema.
 - Movimento orbital lento com profundidade frente/trás.
 - LOD 0–3 e culling por área visível.
@@ -41,24 +42,25 @@ Qualidades: `low`, `medium`, `high`, `ultra`.
 - Seed de 32 bits, parallax, resize responsivo e debug mode.
 
 - Rotação axial procedural independente da órbita, com camadas de superfície/atmosfera em velocidades separadas.
-- Layers PixelPlanets portadas em multipass para Terran, Gas, Lava, Ice e Star.
+- Layers PixelPlanets portadas em multipass para Terran, Dry Terran, Islands, No Atmosphere, Gas, Lava, Ice e Star.
 
 ## Arquitetura
 
 - `Engine` coordena tempo, câmera, cena e loop.
 - `Universe` compõe galaxy, nebulae e Solar Systems.
 - `SystemGenerator` cria sistemas a partir de seeds hierárquicas.
-- `OrbitSystem` atualiza posições usando arrays existentes.
+- `OrbitSystem` atualiza posições usando arrays existentes, incluindo luas em hierarquia planeta → lua.
+- `AsteroidBelt` usa TypedArrays pré-alocados, uma camada batched por lado da órbita e LOD implícito por ponto.
 - `PlanetFactory` seleciona o shader/configuração pelo tipo.
 - `Renderer` mantém os passes fullscreen, VBOs, scissor culling e upscale.
 - `LODManager` decide ponto, esfera simples, shader intermediário ou shader completo.
 - `ShaderLoader` resolve e cacheia includes GLSL.
-- `PlanetGallery` isola Terran, Gas, Lava, Ice e Star para validação layer-by-layer.
+- `PlanetGallery` isola Terran, Gas, Lava, Ice, Dry Terran, Islands, No Atmosphere, luas e asteroide para validação layer-by-layer.
 
 ## PixelPlanets
 
 `PixelPlanets-Wallpaper-Reference/` continua sendo somente referência e não é alterada nem usada em runtime. As adaptações estão documentadas em `docs/PIXELPLANETS_PORT.md` e acompanhadas pela licença em `THIRD_PARTY_LICENSES/`.
 
-## Next Milestone
+## Limitações atuais
 
-Adicionar luas detalhadas, cinturões de asteroides, cometas, estrelas cadentes, áudio reativo e propriedades completas do Wallpaper Engine.
+Luas e cinturões usam o orçamento de corpos LOD do preset. Cinturões são batches de point sprites com silhueta irregular aproximada; não há linhas orbitais de luas nem black holes/cometas nesta etapa.

@@ -9,7 +9,9 @@ Universe
 │   ├── Nebula
 │   └── SolarSystem[]
 │       ├── Star
-│       └── Planet[]
+│       ├── Planet[]
+│       ├── Moon[] (OrbitSystem)
+│       └── AsteroidBelt (front/back batches)
 └── LODManager
 ```
 
@@ -20,7 +22,7 @@ Universe
 1. Nebula fullscreen no framebuffer interno.
 2. Starfield e galáxia como pontos em VBOs.
 3. Linhas orbitais opcionais.
-4. Corpos de sistemas ordenados por profundidade orbital.
+4. Cinturões traseiros, corpos de sistemas ordenados por profundidade orbital, estrela, corpos dianteiros e cinturões frontais.
 5. Cada corpo usa ponto simples, shader intermediário ou shader completo conforme LOD.
 6. Quad fullscreen faz upscale com textura `NEAREST`.
 
@@ -69,6 +71,14 @@ Cada camada pode ter seu próprio relógio: no Terran, terreno/oceano e nuvens u
 ## Galeria de debug
 
 `?planetGallery=true` substitui a composição normal por cinco corpos grandes, em LOD 3: Terran, Gas, Lava, Ice e Star. `planetLayer=composite` mostra a composição; `planetLayer=0`, `1` e `2` mostram o índice correspondente de cada corpo, e também são aceitos nomes como `water`, `land`, `clouds`, `ring`, `craters`, `lakes`, `blobs`, `surface` e `flares`. A galeria usa por padrão os parâmetros e paletas da referência; `referencePalette=false` e `referenceParams=false` reativam os valores procedurais. `animationDebugSpeed=10` acelera apenas o tempo dos layers.
+
+## Luas e cinturões
+
+`SolarSystem` contém `Moon[]` além de `Planet[]`. Cada lua recebe `hashSeed(planetSeed, "moon-N")`, orbita o planeta pai no mesmo `OrbitSystem`, recebe luz da estrela e não cria linhas orbitais por padrão. A ordenação usa a profundidade orbital combinada para evitar que luas atrás de planetas apareçam na frente.
+
+`AsteroidBelt` pré-aloca TypedArrays e buffers WebGL. O update separa asteroides em batches back/front, mantendo gaps, clusters, jitter, inclinação e densidade determinísticos. Cada batch gera uma draw call de point sprites; o asteroide individual usa o shader fullscreen com silhueta irregular e crateras.
+
+`PlanetFactory` agora cobre `TERRAN`, `DRY_TERRAN`, `ISLANDS`, `NO_ATMOSPHERE`, `ROCKY`, `GAS`, `LAVA` e `ICE`. Black hole permanece reservado e não é implementado nesta etapa.
 
 ## LOD
 

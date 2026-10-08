@@ -32,7 +32,7 @@ export class Scene {
   render(renderer, camera, time) {
     if (this.planetGallery) {
       for (const body of this.planetGallery.bodies) {
-        const light = body.kind === "planet" ? this.planetGallery.light : null;
+        const light = body.kind === "star" ? null : this.planetGallery.light;
         renderer.renderBody(body, light, 3, time, GALLERY_CAMERA, this.planetLayer);
       }
       return;
@@ -63,27 +63,33 @@ export class Scene {
       if (this.showOrbits) {
         renderer.renderOrbitLines(system, camera);
       }
-      for (let index = 0; index < system.planets.length; index += 1) {
-        const planet = system.planets[index];
-        if (planet.orbitDepth >= 0) continue;
-        this._renderBody(renderer, planet, system.star, camera, time);
+      const orbitingBodies = system.orbitingBodies;
+      if (system.asteroidBelt) {
+        renderer.renderAsteroidBelt(system.asteroidBelt, system.asteroidBelt.backData, system.asteroidBelt.backCount, camera, time);
+      }
+      for (const body of orbitingBodies) {
+        if (body.orbitDepth >= 0) continue;
+        this._renderBody(renderer, body, system.star, camera, time, body === universe.terran ? 1 : 0);
       }
       this._renderBody(renderer, system.star, null, camera, time);
-      for (let index = 0; index < system.planets.length; index += 1) {
-        const planet = system.planets[index];
-        if (planet.orbitDepth < 0) continue;
-        this._renderBody(renderer, planet, system.star, camera, time);
+      for (const body of orbitingBodies) {
+        if (body.orbitDepth < 0) continue;
+        this._renderBody(renderer, body, system.star, camera, time, body === universe.terran ? 1 : 0);
+      }
+      if (system.asteroidBelt) {
+        renderer.renderAsteroidBelt(system.asteroidBelt, system.asteroidBelt.frontData, system.asteroidBelt.frontCount, camera, time);
       }
     }
   }
 
-  _renderBody(renderer, body, star, camera, time) {
-    if (!this.showPlanet && body.kind === "planet") return;
+  _renderBody(renderer, body, star, camera, time, priority = 0) {
+    if (!this.showPlanet && (body.kind === "planet" || body.kind === "moon")) return;
     if (!this.universe.lod.isVisible(body.position, body.radius, renderer.aspect)) {
       this.universe.lod.culled += 1;
       return;
     }
-    const level = this.universe.lod.classify(body.radius, renderer.internalHeight, body.kind === "planet");
+    const isDetailBody = body.kind === "planet" || body.kind === "moon" || body.kind === "asteroid";
+    const level = this.universe.lod.classify(body.radius, renderer.internalHeight, isDetailBody, priority);
     this.universe.lod.record(level);
     renderer.renderBody(body, star, level, time, camera, "composite");
   }
